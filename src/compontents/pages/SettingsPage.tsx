@@ -300,10 +300,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         { key: 'showOfficialTags', label: 'showOfficialTags' },
       ]),
       homeRightSidebar: filterItems([
-        // { key: 'showAnnualReport', label: 'showAnnualReport' }, // 已替换为广告位
+        // { key: 'showAnnualReport', label: 'showAnnualReport' }, // 已替换为推荐位
       ]),
       web3OnlySettings: filterItems([
-        { key: 'showAdBanner', label: 'showAdBanner' },
+        { key: 'showFeatureSlot', label: 'showFeatureSlot' },
         { key: 'showHunterCampaign', label: 'showHunterCampaign' },
         { key: 'showEngageToEarn', label: 'showEngageToEarn' },
         { key: 'showRealtimeSubscription', label: 'showRealtimeSubscription' },
@@ -322,6 +322,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         { key: 'showProjectRank', label: 'showProjectRank' },
       ]),
       aiOnlySettings: filterItems([
+        { key: 'showHunterCampaign', label: 'showHunterCampaign' },
         { key: 'showHotTrendingAi', label: 'showHotTrendingAi' },
         { key: 'showAiKolFollowers', label: 'showAiKolFollowers' },
         { key: 'showTop100KolsAi', label: 'showTop100KolsAi' },
@@ -994,10 +995,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const handleEvmAddressChange = (value: string) => {
     // 移除空格和特殊字符，只保留字母数字和0x前缀
     const cleanedValue = value.replace(/[^a-fA-F0-9x]/g, '');
+    if (!cleanedValue) {
+      setEvmAddress('');
+      setEvmAddressError('');
+      setEvmAddressSuccess('');
+      return;
+    }
 
     // 如果输入的不是以0x开头，自动添加
     let formattedValue = cleanedValue;
-    if (cleanedValue && !cleanedValue.startsWith('0x')) {
+    if (cleanedValue !== '0' && !cleanedValue.startsWith('0x')) {
       formattedValue = '0x' + cleanedValue;
     }
 

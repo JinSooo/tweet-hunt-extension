@@ -83,11 +83,20 @@ const useTwitterAuthCallback = () => {
     ) {
       hadSetDom.current = true;
       setTimeout(() => {
-        const loginText = `<div style="width: 100%; font-size: 14px; text-align: center;margin-top: 100px;">
-            XHunt: ${t('loggingIn')}
-        </div>`;
-        sectionHeader404 && (sectionHeader404.innerHTML = loginText);
-        errorDom404 && (errorDom404.innerHTML = loginText);
+        const loginText = document.createElement('div');
+        loginText.style.width = '100%';
+        loginText.style.fontSize = '14px';
+        loginText.style.textAlign = 'center';
+        loginText.style.marginTop = '100px';
+        loginText.textContent = `XHunt: ${t('loggingIn')}`;
+        if (sectionHeader404) {
+          sectionHeader404.textContent = '';
+          sectionHeader404.appendChild(loginText.cloneNode(true));
+        }
+        if (errorDom404) {
+          errorDom404.textContent = '';
+          errorDom404.appendChild(loginText);
+        }
       }, 200);
     }
     return () => {

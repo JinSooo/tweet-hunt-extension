@@ -15,10 +15,10 @@ export interface TestConfig {
   testers: string[];
 }
 
-export interface AdBannerItem {
-  id: string; // 广告唯一标识
+export interface FeatureBannerItem {
+  id: string; // 条目唯一标识
   enabled: boolean; // 是否启用
-  type: 'commercial' | 'normal'; // 广告类型：commercial 优先展示
+  type: 'commercial' | 'normal'; // 条目类型：commercial 优先展示
   daily_limit: number; // 每日展示上限，-1 表示无限
   visible_to?: string[]; // 可见用户白名单，空数组或不设置则所有人可见
   // 中文配置
@@ -48,8 +48,8 @@ export interface XHuntConfig {
   flexibleTesting?: {
     [key: string]: string[];
   };
-  // 🆕 首页广告轮播配置
-  adBanners?: AdBannerItem[];
+  // 🆕 首页推荐位轮播配置
+  featureSlots?: FeatureBannerItem[];
 }
 
 export interface DailyLimits {

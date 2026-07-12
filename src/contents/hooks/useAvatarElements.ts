@@ -107,15 +107,17 @@ export function useAvatarElements() {
         roots && roots.length
           ? roots
           : (Array.from(
-              document.querySelectorAll(AVATAR_SELECTOR),
-            ) as HTMLElement[]);
+            document.querySelectorAll(AVATAR_SELECTOR),
+          ) as HTMLElement[]);
 
       elements.forEach((element) => {
         if (!document.body.contains(element)) {
           return;
         }
 
-        if (!processedNodesRef.current.has(element)) {
+        const hasProcessed = processedNodesRef.current.has(element);
+
+        if (!hasProcessed || roots?.length) {
           // Exclusion using closest traversal
           const excludedAncestor = element.closest('[data-xhunt-exclude]');
           let shouldExclude = !!excludedAncestor;
@@ -129,8 +131,11 @@ export function useAvatarElements() {
 
           if (!shouldExclude) {
             matchedElements.add(element);
-            processedNodesRef.current.add(element);
-            processedAvatarElementsRef.current.add(element);
+
+            if (!hasProcessed) {
+              processedNodesRef.current.add(element);
+              processedAvatarElementsRef.current.add(element);
+            }
 
             // Track large avatars
             if (w > 120 || h > 120) {

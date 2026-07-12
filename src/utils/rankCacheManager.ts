@@ -9,8 +9,8 @@ const RANK_CACHE_KEY_OLD = '@xhunt/rank-cache';
 const RANK_CACHE_KEY = '@xhunt/rank-cache-new';
 
 const buildCacheKey = (namespace: RankCacheNamespace): string => {
-  // influence 保持原 key，确保不影响原来的缓存
-  if (namespace === 'influence') return RANK_CACHE_KEY;
+  // web3 保持原 key，确保不影响原来的缓存
+  if (namespace === 'web3') return RANK_CACHE_KEY;
   return `${RANK_CACHE_KEY}-${namespace}`;
 };
 const BATCH_OPERATION_DELAY = 100; // Delay for batch operations
@@ -33,7 +33,7 @@ const devLog = (level: 'log' | 'warn' | 'error', ...args: any[]) => {
   }
 };
 
-export type RankCacheNamespace = 'influence' | 'composite';
+export type RankCacheNamespace = 'web3' | 'ai';
 
 export class RankCacheManager {
   private static cleanupTimer: NodeJS.Timeout | null = null;
@@ -43,8 +43,8 @@ export class RankCacheManager {
     if (this.cleanupTimer) return;
 
     this.cleanupTimer = setInterval(() => {
-      this.performScheduledCleanup('influence');
-      this.performScheduledCleanup('composite');
+      this.performScheduledCleanup('web3');
+      this.performScheduledCleanup('ai');
     }, interval);
 
     devLog(
@@ -456,10 +456,9 @@ export class RankCacheManager {
     try {
       // Clear storage
       // influence: 清理新旧缓存
-      await localStorageInstance.remove(buildCacheKey('influence'));
+      await localStorageInstance.remove(RANK_CACHE_KEY);
       await localStorageInstance.remove(RANK_CACHE_KEY_OLD);
-      // composite: 清理独立命名空间缓存
-      await localStorageInstance.remove(buildCacheKey('composite'));
+      await localStorageInstance.remove(buildCacheKey('ai'));
 
       devLog(
         'log',

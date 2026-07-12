@@ -141,11 +141,32 @@ export function getMBTIColor(mbti: string) {
   return colors[mbti] || 'text-blue-400';
 }
 
+function safeNewTabUrl(url: string): string {
+  const value = typeof url === 'string' ? url.trim() : '';
+  if (!value || value.startsWith('//')) return '';
+
+  try {
+    const parsed = new URL(value, window.location.href);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return '';
+    }
+    return parsed.href;
+  } catch {
+    return '';
+  }
+}
+
 export function openNewTab(url: string) {
-  const win = window.open(url, '_blank');
+  const safeUrl = safeNewTabUrl(url);
+  if (!safeUrl) return;
+
+  const win = window.open(safeUrl, '_blank');
+  if (win) {
+    win.opener = null;
+  }
   if (!win || win.closed) {
     const a = document.createElement('a');
-    a.href = url;
+    a.href = safeUrl;
     a.target = '_blank';
     a.rel = 'noopener noreferrer'; // 安全设置
     a.style.display = 'none';

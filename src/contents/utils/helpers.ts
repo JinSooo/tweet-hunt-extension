@@ -1,16 +1,19 @@
 import { localStorageInstance } from '~storage';
 import type { TwitterInitialStateCurrentUser } from '~types';
 
+export const GUEST_TWITTER_ID = '999999999';
+
 export function sanitizeUsername(value: string | null | undefined): string {
   if (typeof value !== 'string') return '';
-  return value.replace(/^["“”]+|["“”]+$/g, '');
+  const normalized = value.replace(/^["“”]+|["“”]+$/g, '');
+  return /^[A-Za-z0-9_]{1,15}$/.test(normalized) ? normalized : '';
 }
 
 export async function getAuthToken(): Promise<string> {
   try {
     return ((await localStorageInstance.get('@xhunt/token')) as string) || '';
   } catch {
-    return 'void;';
+    return '';
   }
 }
 
@@ -47,8 +50,8 @@ export async function getCurrentTwitterId(): Promise<string> {
     const twitterId = currentUser?.id_str || '';
     return typeof twitterId === 'string' && /^\d+$/.test(twitterId)
       ? twitterId
-      : '';
+      : GUEST_TWITTER_ID;
   } catch {
-    return '';
+    return GUEST_TWITTER_ID;
   }
 }

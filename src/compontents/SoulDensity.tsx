@@ -131,12 +131,12 @@ function SoulDensity({
         {
           ability: t('profileAnalysis'), // 账户信息
           value: safeNumber(data.profile_analysis, 50, 0, 100),
-          description: t('accountAnalysisInfo'), // 账号Profile信息是否真实，是否有广告
+          description: t('accountAnalysisInfo'), // 账号Profile信息是否真实，是否有营销内容
         },
         {
           ability: t('contentAnalysis'), // 内容
           value: safeNumber(data.content_analysis, 50, 0, 100),
-          description: t('contentAnalysisInfo'), // 是否原创，是否由AI生产，是否有广告和嘴撸
+          description: t('contentAnalysisInfo'), // 是否原创，是否由AI生产，是否有营销内容和嘴撸
         },
         {
           ability: t('engagementAnalysis'), // 互动数据

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDebounceEffect, useRequest } from 'ahooks';
 import {
+  fetchAiRankBatch,
   fetchTwitterRankBatchNew as fetchTwitterRankByUsernames,
   postAuthCreator,
   fetchE2EActivities,
@@ -10,19 +11,22 @@ import { useI18n } from '~contents/hooks/i18n.ts';
 import { useCrossPageSettings } from '~utils/settingsManager';
 import { CloseConfirmDialog } from './CloseConfirmDialog';
 import { HunterCampaignBanner } from './HunterCampaign/HunterCampaignBanner';
+import { CampaignProviderBadge } from './HunterCampaign/CampaignProviderBadge';
 import { EngageToEarn } from './EngageToEarn';
 import { LoginRequired } from './LoginRequired';
-import { X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { localStorageInstance } from '~storage/index.ts';
 import { rankService } from '~utils/rankService';
 import { useLocalStorage } from '~storage/useLocalStorage';
 import { TwitterInitialStateCurrentUser } from '~types';
+import type { StoredUserInfo } from '~types/review';
 import { useGlobalTips } from '~compontents/area/GlobalTips.tsx';
 import { openNewTab } from '~contents/utils';
 import {
   SPECIAL_AUTHORED_RANK,
   VALID_RANK_THRESHOLD,
 } from '~contents/constants/rank';
+import type { CampaignDomain } from './HunterCampaign/campaignConfigs';
 
 function isDarkTheme(theme: unknown) {
   return String(theme || '').toLowerCase() === 'dark';
@@ -30,9 +34,48 @@ function isDarkTheme(theme: unknown) {
 
 export interface HunterEarnSectionProps {
   activeHunterCampaigns: any[];
+  domain?: CampaignDomain;
+  active?: boolean;
 }
 
 type CreatorAuthStatusCode = 0 | 1 | 2 | 3 | 4;
+
+const RANK_FETCH_MAX_RETRIES = 2;
+const RANK_FETCH_RETRY_INTERVAL = 500;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function fetchRankRowsWithRetry(
+  domain: CampaignDomain,
+  userName: string,
+) {
+  for (let attempt = 0; attempt <= RANK_FETCH_MAX_RETRIES; attempt += 1) {
+    try {
+      const rows =
+        domain === 'ai'
+          ? await fetchAiRankBatch([userName], true)
+          : await fetchTwitterRankByUsernames([userName], true);
+
+      if (rows !== undefined) {
+        return rows;
+      }
+    } catch (err) {
+      if (attempt >= RANK_FETCH_MAX_RETRIES) {
+        throw err;
+      }
+    }
+
+    if (attempt < RANK_FETCH_MAX_RETRIES) {
+      await sleep(RANK_FETCH_RETRY_INTERVAL * (attempt + 1));
+    }
+  }
+
+  throw new Error('Failed to fetch rank rows after retries');
+}
 
 function getAuthCooldownAllowed(recordTime?: string): boolean {
   if (!recordTime) return true;
@@ -45,6 +88,8 @@ function getAuthCooldownAllowed(recordTime?: string): boolean {
 
 export function HunterEarnSection({
   activeHunterCampaigns,
+  domain = 'web3',
+  active = true,
 }: HunterEarnSectionProps) {
   const { t } = useI18n();
   const { isEnabled } = useCrossPageSettings();
@@ -67,9 +112,15 @@ export function HunterEarnSection({
     string | null
   >(null);
   const [token] = useLocalStorage('@xhunt/token', '');
+  const [loginUser] = useLocalStorage<StoredUserInfo | null>(
+    '@xhunt/user',
+    null,
+  );
   const [theme] = useLocalStorage('@xhunt/theme', 'dark');
   const dark = isDarkTheme(theme);
   const [authorVerifyStatus, setAuthorVerifyStatus] = useState('idle');
+  const [isAuthorVerifySubmitting, setIsAuthorVerifySubmitting] =
+    useState(false);
   const isAuthorVerifyPending = authorVerifyStatus === 'pending';
   const [currentUsername] = useLocalStorage('@xhunt/current-username', '');
   const [showEngageInEarn, setShowEngageInEarn] = React.useState(false);
@@ -82,78 +133,95 @@ export function HunterEarnSection({
   }, []);
   const [userRank, setUserRank] = React.useState<number | null>(null);
   const [isRankLoading, setIsRankLoading] = React.useState(true);
+  const [rankNetworkError, setRankNetworkError] = React.useState(false);
   const [userInfo] = useLocalStorage<TwitterInitialStateCurrentUser | null>(
     '@xhunt/initial-state-current-user',
     null,
   );
-
-  const userName = userInfo?.screen_name || currentUsername;
+  const currentInitialStateUser =
+    userInfo && typeof userInfo === 'object' ? userInfo : null;
+  const currentTwitterId = String(
+    currentInitialStateUser?.id_str || loginUser?.twitterId || '',
+  ).trim();
+  const userName = currentInitialStateUser?.screen_name || currentUsername;
+  // console.log(userName, 'username')
 
   const [creatorAuth, setCreatorAuth] = React.useState<{
     status: CreatorAuthStatusCode;
     recordTime?: string;
   } | null>(null);
 
-  const { run: refreshCreatorAuth } = useRequest(
-    async () => {
-      if (!userName) return;
+  const { run: refreshCreatorAuth, runAsync: refreshCreatorAuthAsync } =
+    useRequest(
+      async () => {
+        if (!active || !userName) return;
 
-      const rows = await fetchTwitterRankByUsernames([userName], true);
-      const first = rows?.[0];
-      const st = first?.auth_creator?.status;
-      const recordTime = first?.auth_creator?.record_time;
+        const rows = await fetchRankRowsWithRetry(domain, userName);
+        setRankNetworkError(false);
+        const first = rows?.[0];
+        const st = first?.auth_creator?.status;
+        const recordTime = first?.auth_creator?.record_time;
 
-      if (typeof st === 'number') {
-        const status = st as CreatorAuthStatusCode;
-        setCreatorAuth({ status, recordTime });
+        if (typeof st === 'number') {
+          const status = st as CreatorAuthStatusCode;
+          setCreatorAuth({ status, recordTime });
 
-        if (status === 1) {
-          setAuthorVerifyStatus('pending');
+          if (status === 1) {
+            setAuthorVerifyStatus('pending');
+          } else {
+            setAuthorVerifyStatus('idle');
+          }
         } else {
+          setCreatorAuth(null);
           setAuthorVerifyStatus('idle');
         }
-      } else {
-        setCreatorAuth(null);
-        setAuthorVerifyStatus('idle');
-      }
 
-      if (first?.kolRank !== undefined) {
-        await rankService.updateRanks({ [userName]: first.kolRank }, 'web3');
-        setUserRank(first.kolRank);
-      }
-    },
-    {
-      manual: true,
-    },
-  );
+        if (first?.kolRank !== undefined) {
+          await rankService.updateRanks({ [userName]: first.kolRank }, domain);
+          setUserRank(first.kolRank);
+        }
+      },
+      {
+        manual: true,
+        onError: () => {
+          setRankNetworkError(true);
+        },
+      },
+    );
+
+  const fetchRank = React.useCallback(async () => {
+    if (!userName) {
+      setIsRankLoading(true);
+      return;
+    }
+    if (!active) {
+      setIsRankLoading(true);
+      return;
+    }
+    setIsRankLoading(true);
+    setRankNetworkError(false);
+    setUserRank(null);
+    try {
+      await refreshCreatorAuthAsync();
+    } catch (err) {
+      console.error('[HunterEarnSection] Failed to fetch rank:', err);
+      setRankNetworkError(true);
+      setUserRank(null);
+      setCreatorAuth(null);
+      setAuthorVerifyStatus('idle');
+    } finally {
+      setIsRankLoading(false);
+      // setRankNetworkError(true); 调试
+    }
+  }, [active, userName, domain, refreshCreatorAuthAsync]);
 
   // 获取当前用户 rank + 认证状态
   React.useEffect(() => {
-    const fetchRank = async () => {
-      if (!userName) {
-        setIsRankLoading(false);
-        return;
-      }
-      setIsRankLoading(true);
-      try {
-        const ranks = await rankService.getRanks([userName], 'web3');
-        const rank = ranks[userName];
-        setUserRank(rank !== undefined ? rank : null);
-
-        refreshCreatorAuth();
-      } catch (err) {
-        console.error('[HunterEarnSection] Failed to fetch rank:', err);
-        setUserRank(null);
-        setCreatorAuth(null);
-        setAuthorVerifyStatus('idle');
-      } finally {
-        setIsRankLoading(false);
-      }
-    };
     fetchRank();
-  }, [userName, refreshCreatorAuth]);
+  }, [fetchRank]);
 
   React.useEffect(() => {
+    if (!active) return;
     if (creatorAuth?.status !== 1) return;
 
     const timer = window.setInterval(() => {
@@ -163,11 +231,12 @@ export function HunterEarnSection({
     return () => {
       window.clearInterval(timer);
     };
-  }, [creatorAuth?.status, refreshCreatorAuth]);
+  }, [active, creatorAuth?.status, refreshCreatorAuth]);
 
   //TEST xhunt eran 本地测试
+  const allowEngage = domain !== 'ai';
   const showHunter = isEnabled('showHunterCampaign');
-  const showEngage = isEnabled('showEngageToEarn');
+  const showEngage = allowEngage && isEnabled('showEngageToEarn');
   const showingEngage = showEngage && (!showHunter || showEngageInEarn);
   const [e2eStatus, setE2EStatus] = React.useState<
     'all' | 'active' | 'complete' | 'review'
@@ -177,6 +246,7 @@ export function HunterEarnSection({
   const initializedRef = React.useRef(false);
   useDebounceEffect(
     () => {
+      if (!active) return;
       if (isLoadingSavedTab) return;
       if (initializedRef.current) return;
       if (!showHunter && !showEngage) return;
@@ -206,7 +276,7 @@ export function HunterEarnSection({
       }
       initializedRef.current = true;
     },
-    [showHunter, showEngage, savedTab, setSavedTab, isLoadingSavedTab],
+    [active, showHunter, showEngage, savedTab, setSavedTab, isLoadingSavedTab],
     {
       wait: 300,
       maxWait: 1000,
@@ -217,6 +287,7 @@ export function HunterEarnSection({
 
   // 当 showingEngage 变化时，更新本地存储
   React.useEffect(() => {
+    if (!active) return;
     if (isLoadingSavedTab) return;
     if (!initializedRef.current) {
       return;
@@ -226,11 +297,14 @@ export function HunterEarnSection({
     } else if (!showingEngage && showHunter) {
       setSavedTab('hunter');
     }
-  }, [showEngage, showHunter]);
+  }, [active, showEngage, showHunter]);
 
   // 拉取 Engage 活动列表用于小红点判断（仅在 showEngage 时）
   React.useEffect(() => {
+    if (!active) return;
     if (!showEngage) return;
+    if (isLoadingSavedTab) return;
+    if (showingEngage || savedTab === 'engage') return;
     let cancelled = false;
     const load = async () => {
       try {
@@ -255,7 +329,7 @@ export function HunterEarnSection({
     return () => {
       cancelled = true;
     };
-  }, [showEngage]);
+  }, [active, showEngage, showingEngage, savedTab, isLoadingSavedTab]);
 
   // 排序后第一个 Hunter 活动 id（用于小红点）- 必须在所有 early return 之前调用
   const sortedHunterCampaigns = React.useMemo(
@@ -275,6 +349,8 @@ export function HunterEarnSection({
     Boolean(newestEngageTweetId) &&
     newestEngageTweetId !== (lastViewedEngage || '');
   const hasHunterCampaigns = sortedHunterCampaigns.length > 0;
+  const shouldHideAiEmptyHunter =
+    domain === 'ai' && !showingEngage && !hasHunterCampaigns;
   const isHunterEmptyState = !showingEngage && !hasHunterCampaigns;
   const isCompactTabs = !hasHunterCampaigns;
 
@@ -289,7 +365,7 @@ export function HunterEarnSection({
     setSavedTab('engage');
   }, [newestEngageTweetId, setLastViewedEngage]);
 
-  if (!userName) {
+  if (!userName || !/^\d+$/.test(currentTwitterId)) {
     return <></>;
   }
 
@@ -297,9 +373,6 @@ export function HunterEarnSection({
     return <></>;
   }
 
-  if (isRankLoading) {
-    return <></>;
-  }
 
   const isCreatorAuthed =
     Number(creatorAuth?.status) === 2 ||
@@ -311,7 +384,11 @@ export function HunterEarnSection({
   const unRankedUser =
     !userRank || userRank <= 0 || userRank >= VALID_RANK_THRESHOLD;
 
-  if (unRankedUser && !isCreatorAuthed && isInCooldown) {
+  if (!isRankLoading && shouldHideAiEmptyHunter) {
+    return <></>;
+  }
+
+  if (!isRankLoading && unRankedUser && !isCreatorAuthed && isInCooldown) {
     // 这种代表用户未上榜，且未认证，且在冷却期，需要等下次认证。
     return <></>;
   }
@@ -321,24 +398,17 @@ export function HunterEarnSection({
       className='relative'
       data-theme={theme}
       ref={setPortalRef}
-      style={
-        {
-          '--xhunt-web-bg': 'transparent',
-        } as React.CSSProperties
-      }
     >
       <div className={`${isHunterEmptyState ? 'px-4 pt-2' : 'px-4 pt-3'} flex items-center justify-between`}>
         <div className='flex items-center gap-2'>
           {showHunter && (
             <button
               type='button'
-              className={`relative inline-flex items-center gap-1.5 rounded-lg font-semibold transition-all ${
-                isCompactTabs ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
-              } ${
-                !showingEngage
+              className={`relative inline-flex items-center gap-1.5 rounded-lg font-semibold transition-all ${isCompactTabs ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
+                } ${!showingEngage
                   ? 'theme-bg-secondary/60 theme-text-secondary border theme-border shadow-none'
                   : 'theme-text-secondary border border-transparent hover:theme-text-primary hover:theme-bg-secondary/60'
-              }`}
+                }`}
               onClick={handleHunterTabClick}
               aria-label={t('xhuntEarnTitle')}
             >
@@ -351,13 +421,11 @@ export function HunterEarnSection({
           {showEngage && (
             <button
               type='button'
-              className={`relative inline-flex items-center gap-1.5 rounded-lg font-semibold transition-all ${
-                isCompactTabs ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
-              } ${
-                showingEngage
+              className={`relative inline-flex items-center gap-1.5 rounded-lg font-semibold transition-all ${isCompactTabs ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
+                } ${showingEngage
                   ? 'theme-bg-secondary/60 theme-text-secondary border theme-border shadow-none'
                   : 'theme-text-secondary border border-transparent hover:theme-text-primary hover:theme-bg-secondary/60'
-              }`}
+                }`}
               onClick={handleEngageTabClick}
               aria-label={t('engageToEarn')}
             >
@@ -368,7 +436,10 @@ export function HunterEarnSection({
             </button>
           )}
         </div>
-        <div className='flex items-center gap-1'>
+        <div className='flex items-center gap-1.5'>
+          {(showHunter || showEngage) && !(unRankedUser && !isCreatorAuthed) && (
+            <CampaignProviderBadge variant='topbar' />
+          )}
           {(showHunter || showEngage) && (
             <button
               type='button'
@@ -385,7 +456,24 @@ export function HunterEarnSection({
         </div>
       </div>
 
-      {unRankedUser && !isCreatorAuthed ? (
+      {isRankLoading ? (
+        <div className='px-4 pt-2 pb-2 flex justify-center'>
+          <Loader2 className='w-4 h-4 text-blue-400 animate-spin' />
+        </div>
+      ) : rankNetworkError ? (
+        <div className='px-4 pt-2 pb-3 flex flex-col items-center justify-center text-center'>
+          <div className='flex items-center gap-2 text-xs theme-text-secondary'>
+            <span>{t('hunterEarnRankNetworkError')}</span>
+            <button
+              type='button'
+              className='font-medium text-blue-400 hover:text-blue-300 transition-colors'
+              onClick={fetchRank}
+            >
+              {t('refresh')}
+            </button>
+          </div>
+        </div>
+      ) : unRankedUser && !isCreatorAuthed ? (
         <>
           {isInCooldown ? (
             <></>
@@ -918,17 +1006,19 @@ export function HunterEarnSection({
                   <div className='mt-2 flex flex-col items-center gap-1.5'>
                     <button
                       type='button'
-                      className={`inline-flex items-center justify-center rounded-full px-4 py-1.5 text-[11px] font-semibold shadow-sm transition-colors bg-transparent border ${
-                        dark
-                          ? 'text-blue-300 border-blue-400/40 hover:border-blue-300/70 hover:text-blue-200 opacity-95 hover:opacity-100'
-                          : 'text-blue-600 border-blue-500/70 hover:border-blue-500/90 hover:text-blue-500 opacity-80 hover:opacity-100'
-                      }`}
+                      className={`inline-flex items-center justify-center rounded-full px-4 py-1.5 text-[11px] font-semibold shadow-sm transition-colors bg-transparent border ${dark
+                        ? 'text-blue-300 border-blue-400/40 hover:border-blue-300/70 hover:text-blue-200 opacity-95 hover:opacity-100'
+                        : 'text-blue-600 border-blue-500/70 hover:border-blue-500/90 hover:text-blue-500 opacity-80 hover:opacity-100'
+                        }`}
+                      disabled={isAuthorVerifySubmitting}
                       onClick={async () => {
+                        if (isAuthorVerifySubmitting) return;
+
                         if (!token) {
                           try {
                             const ret = await getTwitterAuthUrl();
                             if (ret?.url) openNewTab(ret.url);
-                          } catch {}
+                          } catch { }
                           return;
                         }
 
@@ -937,34 +1027,57 @@ export function HunterEarnSection({
                         );
                         if (!confirmed) return;
 
-                        const userId = String(userInfo?.id_str || '').trim();
-                        if (!userId) return;
+                        const userId = currentTwitterId;
+                        if (!/^\d+$/.test(userId)) {
+                          setTips({
+                            text: t('hunterEarnVerifyAuthorMissingUserTip'),
+                            type: 'fail',
+                          });
+                          return;
+                        }
 
+                        setIsAuthorVerifySubmitting(true);
                         try {
                           const ret = await postAuthCreator({
                             user_id: userId,
                           });
                           const action =
                             (ret as any)?.data?.data?.action ??
-                            (ret as any)?.data?.action;
-                          if (action === '认证中') {
+                            (ret as any)?.data?.action ??
+                            (ret as any)?.action;
+                          if (action === '认证中' || action === '已认证') {
                             setAuthorVerifyStatus('pending');
                             setTips({
                               text: t('hunterEarnVerifyAuthorSubmittedTip'),
                               type: 'suc',
                             });
+                            refreshCreatorAuth();
                           } else if (action === '禁止认证') {
                             setTips({
                               text: t('hunterEarnVerifyAuthorBlockedTip'),
                               type: 'fail',
                             });
+                          } else {
+                            setTips({
+                              text: t('hunterEarnVerifyAuthorFailedTip'),
+                              type: 'fail',
+                            });
                           }
                         } catch {
-                          // ignore
+                          setTips({
+                            text: t('hunterEarnVerifyAuthorFailedTip'),
+                            type: 'fail',
+                          });
+                        } finally {
+                          setIsAuthorVerifySubmitting(false);
                         }
                       }}
                     >
-                      {t('hunterEarnVerifyAuthorCta')}
+                      {isAuthorVerifySubmitting ? (
+                        <Loader2 className='w-3 h-3 animate-spin' />
+                      ) : (
+                        t('hunterEarnVerifyAuthorCta')
+                      )}
                     </button>
                   </div>
                 )}
@@ -1030,6 +1143,7 @@ export function HunterEarnSection({
         </>
       )}
 
+
       {(showHunter || showingEngage) && (
         <CloseConfirmDialog
           isOpen={showCloseConfirm}
@@ -1048,7 +1162,7 @@ export function HunterEarnSection({
                   false,
                 );
               }
-            } catch {}
+            } catch { }
           }}
           prefixKey='confirmCloseTrendingPrefix'
           suffixKey='confirmCloseTrendingSuffix'

@@ -2,7 +2,7 @@
 import packageJson from '../../package.json';
 import {
   fetchTwitterRankBatchNew,
-  fetchTwitterCompositeRankBatchMock,
+  fetchAiRankBatch,
   convertNewRankDataToOldFormat,
 } from '~contents/services/api';
 import { RankCacheManager, type RankCacheNamespace } from './rankCacheManager';
@@ -33,9 +33,13 @@ export type RankStatusCallback = (loadingUsernames: Set<string>) => void;
 
 class RankService {
   private statusCallbacks: Set<RankStatusCallback> = new Set();
-  private batchRankFetcher:
-    | ((usernames: string[]) => Promise<RankData[]>)
-    | null = null;
+  private batchRankFetchers: Record<
+    AvatarRankMode,
+    ((usernames: string[]) => Promise<RankData[]>) | null
+  > = {
+    web3: null,
+    ai: null,
+  };
   private isInitialized: boolean = false;
 
   // 初始化排名服务
@@ -49,9 +53,9 @@ class RankService {
     }
 
     try {
-      // 创建批量排名请求函数
+      // 创建 web3 批量排名请求函数
       // @ts-ignore
-      this.batchRankFetcher = RequestMerger.createBatchRequest<
+      this.batchRankFetchers.web3 = RequestMerger.createBatchRequest<
         string,
         RankData
       >({
@@ -59,7 +63,20 @@ class RankService {
         maxBatchSize: 55, // 单次最大请求55个用户名
         requestKey: 'twitter-ranks',
         batchFetcher: async (usernames) =>
-          this.fetchRanksFromAPI(usernames, 'influence'),
+          this.fetchRanksFromAPI(usernames, 'web3'),
+      });
+
+      // 创建 ai 批量排名请求函数
+      // @ts-ignore
+      this.batchRankFetchers.ai = RequestMerger.createBatchRequest<
+        string,
+        RankData
+      >({
+        mergeWindowMs: 400,
+        maxBatchSize: 55,
+        requestKey: 'twitter-ranks-ai',
+        batchFetcher: async (usernames) =>
+          this.fetchRanksFromAPI(usernames, 'ai'),
       });
 
       this.isInitialized = true;
@@ -84,10 +101,12 @@ class RankService {
         `📊 [v${packageJson.version}] Fetching ranks from API for ${usernames.length} usernames`
       );
 
-      const newData =
-        mode === 'composite'
-          ? await fetchTwitterCompositeRankBatchMock(usernames)
-          : await fetchTwitterRankBatchNew(usernames);
+      let newData;
+      if (mode === 'ai') {
+        newData = await fetchAiRankBatch(usernames);
+      } else {
+        newData = await fetchTwitterRankBatchNew(usernames);
+      }
       if (!newData) {
         devLog(
           'warn',
@@ -197,12 +216,10 @@ class RankService {
       );
 
       // 3. 如果有未缓存的用户名，批量请求
-      if (uncachedUsernames.length > 0 && this.batchRankFetcher) {
+      const batchFetcher = this.batchRankFetchers[mode];
+      if (uncachedUsernames.length > 0 && batchFetcher) {
         try {
-          const fetchedRanks =
-            mode === 'influence'
-              ? await this.batchRankFetcher(uncachedUsernames)
-              : await this.fetchRanksFromAPI(uncachedUsernames, mode);
+          const fetchedRanks = await batchFetcher(uncachedUsernames);
 
           // 4. 处理API返回的数据
           const fetchedRankMap: Record<string, number> = {};
@@ -272,7 +289,7 @@ class RankService {
   // 从外部数据更新排名缓存（用于强制刷新后同步缓存）
   public async updateRanks(
     usernameRankMap: Record<string, number>,
-    mode: AvatarRankMode = 'influence'
+    mode: AvatarRankMode = 'web3'
   ): Promise<void> {
     if (Object.keys(usernameRankMap).length === 0) return;
     try {
@@ -311,7 +328,7 @@ class RankService {
     return {
       isInitialized: this.isInitialized,
       statusCallbackCount: this.statusCallbacks.size,
-      cacheStats: RankCacheManager.getStats('influence'),
+      cacheStats: RankCacheManager.getStats('web3'),
       requestMergerStats: RequestMerger.getStats(),
       version: packageJson.version,
     };
@@ -320,11 +337,12 @@ class RankService {
   // 清理方法
   public cleanup(): void {
     this.statusCallbacks.clear();
-    this.batchRankFetcher = null;
+    this.batchRankFetchers = { web3: null, ai: null };
     this.isInitialized = false;
 
     // 清理请求合并器
     RequestMerger.cleanup('twitter-ranks');
+    RequestMerger.cleanup('twitter-ranks-ai');
 
     devLog('log', `📊 [v${packageJson.version}] RankService cleaned up`);
   }

@@ -21,6 +21,7 @@ export interface Message {
   created: string; // timestamp
   isRead?: boolean;
   campaignId?: string | number | null;
+  type?: string; // 可选领域过滤: 'web3' | 'ai' | 'all' 等
 }
 
 // 消息状态类型

@@ -212,6 +212,22 @@ function clearAvatarElementCache(el: HTMLElement) {
   avatarDomMetaCache.delete(el);
 }
 
+function hasAvatarRankDecoration(el: HTMLElement): boolean {
+  if (el.querySelector('.xhunt-avatar-rank-badge')) return true;
+
+  const parent = el.parentElement;
+  if (parent?.querySelector('.xhunt-avatar-rank-badge')) return true;
+
+  const grandParent = parent?.parentElement;
+  if (grandParent?.querySelector('.xhunt-avatar-rank-badge')) return true;
+
+  return Boolean(
+    el.classList.contains('xhunt-avatar-outer-border') ||
+      parent?.classList.contains('xhunt-avatar-inner-border') ||
+      grandParent?.classList.contains('xhunt-avatar-outer-border'),
+  );
+}
+
 // 🆕 处理 unknown username 的特殊情况
 function resolveUnknownUsername(element: HTMLElement): string | null {
   try {
@@ -330,7 +346,11 @@ export function useAvatarRanks() {
         if (!document.body.contains(el)) return;
 
         const processedUrl = (el as any).processedUrl;
-        if (!processedUrl || processedUrl !== currentUrl) {
+        if (
+          !processedUrl ||
+          processedUrl !== currentUrl ||
+          !hasAvatarRankDecoration(el)
+        ) {
           matchedElements.add(el);
         }
       });

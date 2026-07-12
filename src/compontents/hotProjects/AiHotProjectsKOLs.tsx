@@ -202,8 +202,8 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
   const dayOptions = [1, 7] as const;
   const dayLabels: Record<1 | 7, string> = { 1: '1d', 7: '7d' };
 
-  const tweetHourOptions = [1, 4, 24] as const;
-  const tweetHourLabels: Record<number, string> = { 1: '1h', 4: '4h', 24: '24h' };
+  const tweetHourOptions = [1, 4, 8, 24] as const;
+  const tweetHourLabels: Record<number, string> = { 1: '1h', 4: '4h', 8: '8h', 24: '24h' };
 
   const modelHourOptions = [8, 24, 168] as const;
   const modelHourLabels: Record<number, string> = { 8: '8h', 24: '1d', 168: '7d' };

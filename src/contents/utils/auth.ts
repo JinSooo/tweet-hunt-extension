@@ -1,4 +1,5 @@
 import { localStorageInstance } from '~storage';
+import { chatHistoryManager } from '~storage/chatHistoryManager';
 
 /**
  * Centralized cleanup for auth-related state when logging out or switching accounts.
@@ -17,7 +18,12 @@ export async function clearAuthState(): Promise<void> {
         await localStorageInstance.remove(
           `@xhunt/mantleTasks:${currentUserId}`
         );
+        await localStorageInstance.remove(`ai_chat_history_${currentUserId}`);
       }
+    } catch {}
+    try {
+      await chatHistoryManager.clearAllHistory();
+      await localStorageInstance.remove('ai_chat_history');
     } catch {}
     try {
       await localStorageInstance.remove('@xhunt/initial-state-current-user');

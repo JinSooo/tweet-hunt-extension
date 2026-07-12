@@ -210,7 +210,6 @@ export function navigateInX(url: string) {
     });
   } catch (error) {
     cancelActiveNavigationTask();
-    console.log(LOG_PREFIX, 'navigate failed, open raw url in new tab', { url, error });
-    window.open(url, '_blank', 'noopener,noreferrer');
+    console.log(LOG_PREFIX, 'navigate failed, blocked raw fallback', { url, error });
   }
 }

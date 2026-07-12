@@ -18,23 +18,29 @@ export function HomeRightSidebar({ className = '' }: HomeRightSidebarProps) {
     'web3' | 'ai' | null
   >('@xhunt/active-domain', null);
 
+  const initialDomain = savedActiveDomain || primaryDomain;
   const [activeDomain, setActiveDomain] = React.useState<'web3' | 'ai'>(
-    savedActiveDomain || primaryDomain,
+    initialDomain,
   );
 
   // 当用户修改首选领域后，同步更新当前激活的面
   // 但如果已有主动切换记录，则保持用户选择，并支持新 tab 水合后恢复
   React.useEffect(() => {
-    setActiveDomain(savedActiveDomain || primaryDomain);
-  }, [primaryDomain, savedActiveDomain]);
+    const nextDomain = savedActiveDomain || primaryDomain;
+    if (nextDomain === activeDomain) return;
+    setActiveDomain(nextDomain);
+  }, [activeDomain, primaryDomain, savedActiveDomain]);
 
-  // 用户主动切换领域：更新 state + localStorage
+  // 用户主动切换领域
   const handleSwitchDomain = React.useCallback(
     (domain: 'web3' | 'ai') => {
+      if (domain === activeDomain) {
+        return;
+      }
       setActiveDomain(domain);
       setSavedActiveDomain(domain);
     },
-    [setSavedActiveDomain],
+    [activeDomain, setSavedActiveDomain],
   );
 
   const [isSwitcherHovering, setIsSwitcherHovering] = React.useState(false);
@@ -74,8 +80,13 @@ export function HomeRightSidebar({ className = '' }: HomeRightSidebarProps) {
     };
   }, []);
 
-  const web3Content = <Web3HomeSidebar className={className} />;
-  const aiContent = <AiHomeSidebar />;
+  const web3Content = (
+    <Web3HomeSidebar
+      active={activeDomain === 'web3'}
+      className={className}
+    />
+  );
+  const aiContent = <AiHomeSidebar active={activeDomain === 'ai'} />;
 
   if (!hasBoth) {
     if (hasWeb3) return web3Content;
@@ -132,8 +143,8 @@ export function HomeRightSidebar({ className = '' }: HomeRightSidebarProps) {
                 handleSwitchDomain('web3');
               }}
               className={`flex h-7 items-center justify-center rounded-xl px-1.5 text-xs font-semibold transition-all duration-200 whitespace-nowrap ${activeDomain === 'web3'
-                ? ''
-                : 'theme-text-secondary hover:theme-text-primary hover:bg-slate-500/10'
+                  ? ''
+                  : 'theme-text-secondary hover:theme-text-primary hover:bg-slate-500/10'
                 }`}
               style={
                 activeDomain === 'web3'
@@ -158,8 +169,8 @@ export function HomeRightSidebar({ className = '' }: HomeRightSidebarProps) {
                 handleSwitchDomain('ai');
               }}
               className={`flex h-7 items-center justify-center rounded-xl px-1.5 text-xs font-semibold transition-all duration-200 whitespace-nowrap ${activeDomain === 'ai'
-                ? ''
-                : 'theme-text-secondary hover:theme-text-primary hover:bg-slate-500/10'
+                  ? ''
+                  : 'theme-text-secondary hover:theme-text-primary hover:bg-slate-500/10'
                 }`}
               style={
                 activeDomain === 'ai'

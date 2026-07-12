@@ -18,23 +18,6 @@ declare module 'url:~/assets/*' {
 }
 
 declare interface Window {
-  _getHeader: (
-    requestId: string,
-    timestamp: string,
-    fingerprint: string,
-    signature: string,
-    version: string
-  ) => Record<string, string>;
-  _getPayload: (
-    method: string,
-    path: string,
-    timestamp: string | number,
-    fingerprint: string,
-    body?: Record<any, any>
-  ) => string;
-  _xhunt: string;
-  dataLayer: any[];
-  gtag: (...args: any[]) => void;
   _xhunt_language: string;
 }
 
@@ -65,14 +48,6 @@ interface Chrome {
       height: number;
       focused: boolean;
     }) => void;
-  };
-  scripting: {
-    executeScript(request: {
-      target: { tabId: number };
-      world: 'MAIN' | 'ISOLATED';
-      func: (() => any) | string;
-      args?: any[];
-    }): Promise<Array<{ result: any }>>;
   };
   tabs: {
     query(queryInfo: {

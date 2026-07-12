@@ -28,7 +28,12 @@ import {
 } from 'lucide-react';
 import { localStorageInstance } from '~storage/index';
 import { CloseConfirmDialog } from './CloseConfirmDialog';
+import { ExtensionUpdateRequiredDialog } from './ExtensionUpdateRequiredDialog';
 import { formatNumber as formatRankThreshold } from './HunterCampaign/utils';
+import {
+  getExtensionUpdateRequiredInfo,
+  ExtensionUpdateRequiredInfo,
+} from '~utils/extensionUpdateRequired';
 
 interface EngageToEarnProps {
   className?: string;
@@ -89,6 +94,8 @@ export function EngageToEarn({
     Record<string, boolean>
   >({});
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
+  const [extensionUpdateInfo, setExtensionUpdateInfo] =
+    useState<ExtensionUpdateRequiredInfo | null>(null);
   const [token] = useLocalStorage('@xhunt/token', '');
   const [user] = useLocalStorage<StoredUserInfo | null | ''>(
     '@xhunt/user',
@@ -411,6 +418,13 @@ export function EngageToEarn({
           user_id: String(userId),
           user_address: String(userAddress),
         });
+        const updateInfo = getExtensionUpdateRequiredInfo(result, lang);
+        if (updateInfo) {
+          setExtensionUpdateInfo(updateInfo);
+          setSignupLoading({ ...signupLoading, [activityId]: false });
+          return;
+        }
+
         const ok =
           Boolean((result as any)?.success) || Boolean((result as any)?.status);
         if (ok) {
@@ -426,6 +440,12 @@ export function EngageToEarn({
           setSignupErrors({ ...signupErrors, [activityId]: errorMsg });
         }
       } catch (e) {
+        const updateInfo = getExtensionUpdateRequiredInfo(e, lang);
+        if (updateInfo) {
+          setExtensionUpdateInfo(updateInfo);
+          setSignupLoading({ ...signupLoading, [activityId]: false });
+          return;
+        }
         setSignupErrors({
           ...signupErrors,
           [activityId]: cleanErrorMessage(String(e)),
@@ -600,6 +620,12 @@ export function EngageToEarn({
       onMouseLeave={handleListMouseLeave}
       onMouseEnter={handleListMouseEnter}
     >
+      <ExtensionUpdateRequiredDialog
+        open={Boolean(extensionUpdateInfo)}
+        info={extensionUpdateInfo}
+        onClose={() => setExtensionUpdateInfo(null)}
+        mode={embedded ? 'absolute' : 'fixed'}
+      />
       {!embedded && (
         <div className='px-4 pt-3 theme-border flex-shrink-0'>
           <div className='flex items-center justify-between mb-3'>
@@ -833,6 +859,7 @@ export function EngageToEarn({
                   currentUsername={
                     user && typeof user === 'object' ? user.username : ''
                   }
+                  isLoggedIn={Boolean(token)}
                   userInfoCacheBust={userInfoCacheBust}
                   theme={theme as 'dark' | 'light'}
                   t={t}
@@ -941,6 +968,7 @@ interface ActivityCardProps {
   signupError: string;
   onNavigateToSettings: () => void;
   currentUsername: string;
+  isLoggedIn: boolean;
   userInfoCacheBust: number;
   theme: 'dark' | 'light';
   t: (key: string) => string;
@@ -999,20 +1027,20 @@ const PolicyDisclaimer: React.FC<PolicyDisclaimerProps> = ({
   t,
 }) => {
   const [expanded, setExpanded] = React.useState(false);
-  const policyText = t('hunterCampaignPaidPartnershipDisclaimer');
+  const policyText = t('hunterCampaignPolicyDisclaimer');
 
   return (
     <label
       className={`group flex items-start gap-2 p-2 rounded-lg border transition-all duration-200 cursor-pointer mt-2 ${agreed
-        ? 'bg-gradient-to-br from-amber-400/5 to-blue-500/5 border-amber-400/20 hover:border-amber-400/30'
-        : 'bg-amber-400/[0.02] border-amber-400/15 hover:border-amber-400/25 hover:bg-amber-400/[0.04]'
+        ? 'bg-gradient-to-br from-blue-500/[0.06] to-purple-500/[0.06] border-blue-400/25 hover:border-blue-400/35'
+        : 'bg-white/[0.02] theme-border hover:border-blue-400/20 hover:bg-white/[0.035]'
         }`}
     >
       {/* 自定义 checkbox */}
       <div
         className={`relative flex items-center justify-center w-4 h-4 mt-0.5 rounded transition-all duration-200 flex-shrink-0 ${agreed
-          ? 'bg-gradient-to-br from-amber-400 to-amber-500 shadow-sm shadow-amber-500/20'
-          : 'border border-dashed border-amber-400/50 group-hover:border-amber-400/70 group-hover:bg-amber-400/5'
+          ? 'bg-gradient-to-br from-blue-500 to-purple-500 shadow-sm shadow-blue-500/20'
+          : 'border border-dashed border-blue-400/35 group-hover:border-blue-400/55 group-hover:bg-blue-400/5'
           }`}
       >
         {agreed && (
@@ -1041,7 +1069,7 @@ const PolicyDisclaimer: React.FC<PolicyDisclaimerProps> = ({
                 e.stopPropagation();
                 setExpanded(false);
               }}
-              className='inline-flex items-center gap-0.5 ml-1 text-[9px] text-amber-500/70 hover:text-amber-500 transition-colors align-middle'
+              className='inline-flex items-center gap-0.5 ml-1 text-[9px] text-blue-500/70 hover:text-blue-500 transition-colors align-middle'
             >
               <span>{t('collapse')}</span>
               <ChevronUp className='w-3 h-3' />
@@ -1061,7 +1089,7 @@ const PolicyDisclaimer: React.FC<PolicyDisclaimerProps> = ({
                 e.stopPropagation();
                 setExpanded(true);
               }}
-              className='inline-flex items-center gap-0.5 flex-shrink-0 text-[9px] text-amber-500/70 hover:text-amber-500 transition-colors'
+              className='inline-flex items-center gap-0.5 flex-shrink-0 text-[9px] text-blue-500/70 hover:text-blue-500 transition-colors'
             >
               <span>{t('expand')}</span>
               <ChevronDown className='w-3 h-3' />
@@ -1069,6 +1097,47 @@ const PolicyDisclaimer: React.FC<PolicyDisclaimerProps> = ({
           </div>
         )}
       </div>
+    </label>
+  );
+};
+
+interface ProviderAuthorizationCheckboxProps {
+  agreed: boolean;
+  onAgreeChange: (value: boolean) => void;
+  t: (key: string) => string;
+}
+
+const ProviderAuthorizationCheckbox: React.FC<ProviderAuthorizationCheckboxProps> = ({
+  agreed,
+  onAgreeChange,
+  t,
+}) => {
+  return (
+    <label
+      className={`group flex items-start gap-2 p-2 rounded-lg border transition-all duration-200 cursor-pointer mt-2 ${agreed
+        ? 'bg-gradient-to-br from-blue-500/[0.06] to-purple-500/[0.06] border-blue-400/25 hover:border-blue-400/35'
+        : 'bg-white/[0.02] theme-border hover:border-blue-400/20 hover:bg-white/[0.035]'
+        }`}
+    >
+      <div
+        className={`relative flex items-center justify-center w-4 h-4 mt-0.5 rounded transition-all duration-200 flex-shrink-0 ${agreed
+          ? 'bg-gradient-to-br from-blue-500 to-purple-500 shadow-sm shadow-blue-500/20'
+          : 'border border-dashed border-blue-400/35 group-hover:border-blue-400/55 group-hover:bg-blue-400/5'
+          }`}
+      >
+        {agreed && (
+          <Check className='w-2.5 h-2.5 text-white' strokeWidth={3} />
+        )}
+      </div>
+      <input
+        type='checkbox'
+        checked={agreed}
+        onChange={(e) => onAgreeChange(e.target.checked)}
+        className='sr-only'
+      />
+      <p className='text-[10px] leading-relaxed theme-text-secondary/80 select-none'>
+        {t('hunterCampaignProviderAuthorization')}
+      </p>
     </label>
   );
 };
@@ -1084,6 +1153,7 @@ function ActivityCard({
   signupError,
   onNavigateToSettings,
   currentUsername,
+  isLoggedIn,
   userInfoCacheBust,
   theme,
   t,
@@ -1093,7 +1163,9 @@ function ActivityCard({
 }: ActivityCardProps) {
   const [showLeaderboard, setShowLeaderboard] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
-  const [agreedToSponsoredPolicy, setAgreedToSponsoredPolicy] = React.useState(false);
+  const [agreedToPolicy, setAgreedToPolicy] = React.useState(false);
+  const [agreedToProviderAuthorization, setAgreedToProviderAuthorization] =
+    React.useState(false);
   const leaderboardRef = React.useRef<HTMLDivElement | null>(null);
   const cardRef = React.useRef<HTMLDivElement | null>(null);
   const { detail, current_user, leaderboard } = activityData;
@@ -1349,12 +1421,19 @@ function ActivityCard({
         )}
 
         {/* 付费推广政策免责声明（仅未报名且进行中时显示） */}
-        {status === 'active' && !isSignedUp && (
-          <PolicyDisclaimer
-            agreed={agreedToSponsoredPolicy}
-            onAgreeChange={setAgreedToSponsoredPolicy}
-            t={t}
-          />
+        {status === 'active' && !isSignedUp && isLoggedIn && (
+          <>
+            <PolicyDisclaimer
+              agreed={agreedToPolicy}
+              onAgreeChange={setAgreedToPolicy}
+              t={t}
+            />
+            <ProviderAuthorizationCheckbox
+              agreed={agreedToProviderAuthorization}
+              onAgreeChange={setAgreedToProviderAuthorization}
+              t={t}
+            />
+          </>
         )}
       </div>
 
@@ -1399,13 +1478,24 @@ function ActivityCard({
         {status === 'active' && (
           <div className='relative group flex-1'>
             <button
-              onClick={() => canSignup && agreedToSponsoredPolicy && onSignup(activityData)}
-              disabled={!canSignup || !agreedToSponsoredPolicy}
+              onClick={() =>
+                canSignup &&
+                (!isLoggedIn ||
+                  (agreedToPolicy && agreedToProviderAuthorization)) &&
+                onSignup(activityData)
+              }
+              disabled={
+                !canSignup ||
+                (isLoggedIn &&
+                  (!agreedToPolicy || !agreedToProviderAuthorization))
+              }
               className={`w-full flex items-center justify-center gap-1 px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${isSignedUp
                 ? theme === 'dark'
                   ? 'bg-blue-600/10 text-blue-300 cursor-not-allowed'
                   : 'bg-blue-500/10 text-blue-600 cursor-not-allowed'
-                : canSignup && agreedToSponsoredPolicy
+                : canSignup &&
+                    (!isLoggedIn ||
+                      (agreedToPolicy && agreedToProviderAuthorization))
                   ? theme === 'dark'
                     ? 'bg-gradient-to-r from-blue-600/90 to-purple-700/90 text-white hover:from-blue-600 hover:to-purple-700 shadow-md hover:shadow-lg'
                     : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl'
@@ -1452,9 +1542,11 @@ function ActivityCard({
               )}
             </button>
             {/* 未同意政策时的提示 */}
-            {!isSignedUp && canSignup && !agreedToSponsoredPolicy && (
+            {!isSignedUp && isLoggedIn && canSignup && (!agreedToPolicy || !agreedToProviderAuthorization) && (
               <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-gray-800 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10 shadow-lg'>
-                {t('hunterCampaignAgreeToPolicyFirst')}
+                {!agreedToPolicy
+                  ? t('hunterCampaignAgreeToPolicyFirst')
+                  : t('hunterCampaignAgreeToProviderAuthorizationFirst')}
                 <div className='absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800'></div>
               </div>
             )}

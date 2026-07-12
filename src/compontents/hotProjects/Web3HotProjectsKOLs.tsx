@@ -28,6 +28,7 @@ import {
   getTopTag,
   getProjectAttitude,
   getHotTweet,
+  getTrendingTweets,
   getHotTweetMedia,
 } from '~contents/services/api.ts';
 import { TokenTreemapVisualization } from '../HotProjectsKOLs/TokenTreemapVisualization';
@@ -47,6 +48,7 @@ import { CloseConfirmDialog } from '../CloseConfirmDialog';
 import { SecondaryTabs } from '../SecondaryTabs';
 import { TweetTagFilter } from '../HotProjectsKOLs/TweetTagFilter';
 import { TweetList } from '../HotProjectsKOLs/TweetList';
+import { ReplyAlphaTweetList } from '../HotProjectsKOLs/ReplyAlphaTweetList';
 import { HotTweetMediaList } from '../HotProjectsKOLs/HotTweetMediaList';
 
 export interface Web3HotProjectsKOLsProps {
@@ -56,6 +58,7 @@ export interface Web3HotProjectsKOLsProps {
 type HotTabId =
   | 'person'
   | 'tweet'
+  | 'reply'
   | 'discussion'
   | 'following'
   | 'token'
@@ -231,6 +234,17 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     refreshDeps: [currentRegion, activeHours],
   });
 
+  // 抢评 Alpha 推文数据请求
+  const {
+    data: trendingTweetsData,
+    loading: trendingTweetsLoading,
+    run: fetchTrendingTweetsData,
+  } = useRequest(() => getTrendingTweets(currentRegion as any), {
+    manual: true,
+    debounceWait: 300,
+    refreshDeps: [currentRegion],
+  });
+
   // 热门图片/视频数据请求
   const {
     data: hotTweetMediaData,
@@ -277,6 +291,11 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
       return;
     }
 
+    if (activeType === 'reply') {
+      fetchTrendingTweetsData();
+      return;
+    }
+
     if (activeType === 'media') {
       fetchHotTweetMediaData();
       return;
@@ -302,6 +321,9 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     if (newType === activeType) return;
 
     const updateActiveType = () => {
+      if (newType === 'reply') {
+        setShowDaysDropdown(false);
+      }
       setActiveType(newType);
     };
 
@@ -410,6 +432,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
   };
 
   const isTweetTab = activeType === 'tweet';
+  const isReplyTab = activeType === 'reply';
   const timeOptions = isTweetTab ? hourOptions : dayOptions;
   const activeTimeValue = isTweetTab ? activeHours : activeDays;
 
@@ -422,7 +445,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
       'web3',
       activeType,
       currentRegion,
-      isTweetTab ? activeHours : activeDays,
+      isTweetTab ? activeHours : isReplyTab ? null : activeDays,
     ];
 
     if (activeType === 'person') {
@@ -455,6 +478,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     activeMediaTab,
     activeType,
     currentRegion,
+    isReplyTab,
     isTweetTab,
     tweetTagFilter.groupId,
     tweetTagFilter.hotTag,
@@ -470,6 +494,11 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
   const tweetItems = useMemo(
     () => hotTweetData?.data?.data || [],
     [hotTweetData],
+  );
+
+  const replyAlphaItems = useMemo(
+    () => trendingTweetsData?.data?.data?.items || [],
+    [trendingTweetsData],
   );
 
   const mediaItems = useMemo(
@@ -538,9 +567,32 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
               onExpandChange={setFilterPanelExpanded}
             />
 
-            <TweetList
-              items={tweetItems}
-              filter={tweetTagFilter}
+            {hotTweetLoading ? (
+              <div className='flex items-center justify-center h-full min-h-[300px]'>
+                <div className='w-6 h-6 border-2 border-blue-400/20 border-t-blue-400 rounded-full animate-spin'></div>
+              </div>
+            ) : (
+              <TweetList
+                items={tweetItems}
+                filter={tweetTagFilter}
+                lang={lang === 'zh' ? 'zh' : 'en'}
+              />
+            )}
+          </div>
+        ),
+      },
+      {
+        id: 'reply' as const,
+        label: t('replyAlpha'),
+        icon: MessageSquare,
+        isNew: true,
+        tooltip: t('replyAlphaDescription'),
+        loading: trendingTweetsLoading,
+        hasData: replyAlphaItems.length > 0,
+        render: () => (
+          <div className='min-h-[360px] mt-1'>
+            <ReplyAlphaTweetList
+              items={replyAlphaItems}
               lang={lang === 'zh' ? 'zh' : 'en'}
             />
           </div>
@@ -605,7 +657,6 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
         id: 'media' as const,
         label: t('hotTweetMedia'),
         icon: Images,
-        isNew: true,
         tooltip: '',
         loading: hotTweetMediaLoading,
         hasData: mediaItems.length > 0,
@@ -641,8 +692,10 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
       tokenLoading,
       topInfluencerItems,
       topInfluencerLoading,
+      trendingTweetsLoading,
       twitterTopInfluencerItems,
       twitterTopInfluencerLoading,
+      replyAlphaItems,
       tweetItems,
       tweetTagFilter,
       outerScrollMemoryKey,
@@ -760,61 +813,63 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
             )}
 
             {/* 日期下拉选择 */}
-            <div className='relative'>
-              <button
-                className='h-7 flex items-center gap-1 px-2.5 text-[11px] font-semibold rounded-xl theme-text-primary theme-hover transition-all border theme-border whitespace-nowrap'
-                onClick={() => setShowDaysDropdown(!showDaysDropdown)}
-                style={{
-                  background:
-                    'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.10)',
-                }}
-              >
-                {activeTimeLabel}
-                <ChevronDown className='w-3 h-3 shrink-0' />
-              </button>
+            {activeType !== 'reply' && (
+              <div className='relative'>
+                <button
+                  className='h-7 flex items-center gap-1 px-2.5 text-[11px] font-semibold rounded-xl theme-text-primary theme-hover transition-all border theme-border whitespace-nowrap'
+                  onClick={() => setShowDaysDropdown(!showDaysDropdown)}
+                  style={{
+                    background:
+                      'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.10)',
+                  }}
+                >
+                  {activeTimeLabel}
+                  <ChevronDown className='w-3 h-3 shrink-0' />
+                </button>
 
-              {showDaysDropdown && (
-                <>
-                  <div
-                    className='fixed inset-0 z-10'
-                    onClick={() => setShowDaysDropdown(false)}
-                  />
-                  <div className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[86px] backdrop-blur-md'>
-                    {timeOptions.map((days) => {
-                      const selected = activeTimeValue === days;
-                      const label = isTweetTab
-                        ? hourLabels[days as 1 | 4 | 8 | 24]
-                        : dayLabels[days as 1 | 7];
+                {showDaysDropdown && (
+                  <>
+                    <div
+                      className='fixed inset-0 z-10'
+                      onClick={() => setShowDaysDropdown(false)}
+                    />
+                    <div className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[86px] backdrop-blur-md'>
+                      {timeOptions.map((days) => {
+                        const selected = activeTimeValue === days;
+                        const label = isTweetTab
+                          ? hourLabels[days as 1 | 4 | 8 | 24]
+                          : dayLabels[days as 1 | 7];
 
-                      return (
-                        <button
-                          key={days}
-                          className={`w-full h-8 px-2.5 rounded-xl text-xs font-medium text-left transition-all flex items-center justify-between gap-2 ${selected
-                            ? 'text-blue-500 bg-blue-500/10'
-                            : 'theme-text-primary hover:bg-slate-500/10'
-                            }`}
-                          onClick={() => {
-                            // @ts-ignore
-                            if (activeType === 'tweet') {
-                              // hours mode
-                              setActiveHours(days as any);
-                            } else {
-                              // days mode
-                              setActiveDays(days as any);
-                            }
-                            setShowDaysDropdown(false);
-                          }}
-                        >
-                          <span>{label}</span>
-                          {selected && <Check className='w-3.5 h-3.5 shrink-0' />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
+                        return (
+                          <button
+                            key={days}
+                            className={`w-full h-8 px-2.5 rounded-xl text-xs font-medium text-left transition-all flex items-center justify-between gap-2 ${selected
+                              ? 'text-blue-500 bg-blue-500/10'
+                              : 'theme-text-primary hover:bg-slate-500/10'
+                              }`}
+                            onClick={() => {
+                              // @ts-ignore
+                              if (activeType === 'tweet') {
+                                // hours mode
+                                setActiveHours(days as any);
+                              } else {
+                                // days mode
+                                setActiveDays(days as any);
+                              }
+                              setShowDaysDropdown(false);
+                            }}
+                          >
+                            <span>{label}</span>
+                            {selected && <Check className='w-3.5 h-3.5 shrink-0' />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* 关闭按钮 */}
             <button

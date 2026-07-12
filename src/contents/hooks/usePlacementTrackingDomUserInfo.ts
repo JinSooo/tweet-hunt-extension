@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useWaitForElement from './useWaitForElement';
 import useCurrentUrl from './useCurrentUrl';
 import { extractUsernameFromUrl } from '~contents/utils';
@@ -12,6 +12,9 @@ import { useLocalStorage } from '~storage/useLocalStorage';
  * 返回当前 profile 页的推特 handler, Twitter ID 和加载状态。
  */
 type FollowState = 'follow' | 'unfollow' | null;
+
+const USER_PROFILE_SCHEMA_SELECTOR =
+  'script[type="application/ld+json"][data-testid="UserProfileSchema-test"]';
 
 export default function usePlacementTrackingDomUserInfo(options?: {
   onFollowBtnClick?: (payload: {
@@ -67,6 +70,10 @@ export default function usePlacementTrackingDomUserInfo(options?: {
     'div[data-testid="primaryColumn"] a[data-testid="editProfileButton"]',
     [currentUrl]
   );
+  const userProfileSchemaEl = useWaitForElement(
+    USER_PROFILE_SCHEMA_SELECTOR,
+    [currentUrl]
+  );
 
   const followButton = useMemo<HTMLButtonElement | null | undefined>(() => {
     if (!placementTrackingEl || !urlUid) return undefined;
@@ -107,12 +114,23 @@ export default function usePlacementTrackingDomUserInfo(options?: {
         if (isCurrentUser || editProfileButtonEl) {
           try {
             const userInfo = await getCurrentUserInfo();
+            const currentUserHandler = userInfo?.screen_name || '';
+            const shouldUseProfileSchema =
+              isCurrentUser &&
+              urlUid &&
+              currentUserHandler.toLocaleLowerCase() !==
+              String(urlUid).toLocaleLowerCase();
+            const schemaInfo = shouldUseProfileSchema
+              ? getUserProfileSchemaInfo(userProfileSchemaEl)
+              : null;
+
             if (!cancelled) {
               setInfoState({
-                twitterId: userInfo?.id_str || '',
-                handler: userInfo?.screen_name || '',
-                displayName: userInfo?.name || '',
-                avatar: userInfo?.profile_image_url_https || '',
+                twitterId: schemaInfo?.twitterId || userInfo?.id_str || '',
+                handler: schemaInfo?.handler || currentUserHandler || '',
+                displayName: schemaInfo?.displayName || userInfo?.name || '',
+                avatar:
+                  schemaInfo?.avatar || userInfo?.profile_image_url_https || '',
                 followState: null,
               });
             }
@@ -126,13 +144,28 @@ export default function usePlacementTrackingDomUserInfo(options?: {
           currentUrl,
           el: placementTrackingEl,
         });
-        if (!cancelled && info.twitterId) {
+        const shouldUseProfileSchema = !info.twitterId;
+        const schemaInfo = shouldUseProfileSchema
+          ? getUserProfileSchemaInfo(userProfileSchemaEl)
+          : null;
+        const twitterId = schemaInfo?.twitterId || info.twitterId;
+        const handler = schemaInfo?.handler || info.handler || urlUid || '';
+
+        if (!cancelled && twitterId) {
           setInfoState({
-            twitterId: info.twitterId,
-            handler: info.handler,
-            displayName: info.displayName,
-            avatar: info.avatar,
+            twitterId,
+            handler,
+            displayName: schemaInfo?.displayName || info.displayName,
+            avatar: schemaInfo?.avatar || info.avatar,
             followState: info.followState,
+          });
+        } else if (!cancelled) {
+          setInfoState({
+            twitterId: '',
+            handler,
+            displayName: schemaInfo?.displayName || info.displayName || '',
+            avatar: schemaInfo?.avatar || info.avatar || '',
+            followState: info.followState || null,
           });
         }
       })();
@@ -150,6 +183,7 @@ export default function usePlacementTrackingDomUserInfo(options?: {
       editProfileButtonEl,
       emptyStateDom,
       isCurrentUser,
+      userProfileSchemaEl,
     ],
     { wait: 200, leading: true, trailing: true }
   );
@@ -241,7 +275,7 @@ export default function usePlacementTrackingDomUserInfo(options?: {
       if (
         !handler ||
         String(handler).toLocaleLowerCase() ===
-          String(urlUid).toLocaleLowerCase()
+        String(urlUid).toLocaleLowerCase()
       ) {
         setLoading(false);
       }
@@ -310,7 +344,6 @@ export default function usePlacementTrackingDomUserInfo(options?: {
     ],
     { wait: 200 }
   );
-
   return {
     currentUrl,
     urlUid,
@@ -325,6 +358,40 @@ export default function usePlacementTrackingDomUserInfo(options?: {
     loading,
     isEmptyState: !!emptyStateDom,
   };
+}
+
+
+export function getUserProfileSchemaInfo(el?: Element | null): {
+  twitterId: string;
+  handler: string;
+  displayName: string;
+  avatar: string;
+} | null {
+  const schemaEl =
+    el ||
+    document.querySelector(USER_PROFILE_SCHEMA_SELECTOR);
+
+  if (!schemaEl?.textContent) return null;
+
+  try {
+    const data = JSON.parse(schemaEl.textContent || '{}');
+    const person = data?.mainEntity;
+    if (!person) return null;
+
+    const urlHandler =
+      typeof person.url === 'string'
+        ? extractUsernameFromUrl(person.url) || ''
+        : '';
+
+    return {
+      twitterId: String(person.identifier || ''),
+      handler: person.additionalName || urlHandler || '',
+      displayName: person.name || '',
+      avatar: person.image?.contentUrl || person.image?.thumbnailUrl || '',
+    };
+  } catch {
+    return null;
+  }
 }
 
 let _cacheUrl: string | undefined;
@@ -405,7 +472,7 @@ const _CACHE_KEY = '@xhunt/placementInfoCacheV2';
         if (firstKey) _placementInfoCache.delete(firstKey);
       }
     }
-  } catch {}
+  } catch { }
 })();
 
 export function getPlacementTrackingInfo(options?: {
@@ -540,7 +607,7 @@ export function getPlacementTrackingInfo(options?: {
           _CACHE_KEY,
           Array.from(_placementInfoCache.entries())
         );
-      } catch {}
+      } catch { }
     })();
   }
   return result;

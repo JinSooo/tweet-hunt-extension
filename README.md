@@ -66,9 +66,9 @@
 - **前端**: React 18 + TypeScript + Tailwind CSS
 - **状态管理**: Plasmo Storage + ahooks
 - **数据可视化**: D3.js + Recharts + Canvas API
-- **UI / 动效**: lucide-react + lottie-react + 自定义组件
+- **UI / 动效**: lucide-react + 自定义组件
 - **构建工具**: Plasmo（内置构建链路）+ PostCSS + Autoprefixer
-- **工具库**: tippy.js（tooltip）、dayjs（日期处理）、uuid、numeral、qrcode、axios
+- **工具库**: dayjs（日期处理）、uuid、numeral、qrcode、axios
 
 ### 📦 安装和开发
 
@@ -299,9 +299,9 @@ XHunt 严格遵守以下隐私标准，确保用户信息与操作的高度隔�
 - **Frontend**: React 18 + TypeScript + Tailwind CSS
 - **State Management**: Plasmo Storage + ahooks
 - **Data Visualization**: D3.js + Recharts + Canvas API
-- **UI / Motion**: lucide-react + lottie-react + custom components
+- **UI / Motion**: lucide-react + custom components
 - **Build Tools**: Plasmo (built-in bundling) + PostCSS + Autoprefixer
-- **Utility Libraries**: tippy.js (tooltip), dayjs (date handling), uuid, numeral, qrcode, axios
+- **Utility Libraries**: dayjs (date handling), uuid, numeral, qrcode, axios
 
 ### 📦 Installation and Development
 
@@ -363,7 +363,7 @@ src/
 #### Data Fetching and Security
 
 - Uses Chrome Extension Message Passing for secure cross-origin requests
-- Implements device fingerprinting and request signature verification
+- Implements request signature verification
 - Supports request cancellation and error handling
 
 #### Dynamic Content Injection

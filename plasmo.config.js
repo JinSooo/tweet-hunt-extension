@@ -3,7 +3,7 @@ const { defineConfig } = require('plasmo');
 module.exports = defineConfig({
   // 扩展权限配置 - 尝试不同的格式
   manifest: {
-    permissions: ['storage', 'scripting', 'idle'],
+    permissions: ['storage', 'idle'],
     host_permissions: ['https://x.com/*'],
     action: {
       default_popup: undefined,
@@ -15,7 +15,7 @@ module.exports = defineConfig({
     // 生产环境启用压缩
     minify: true,
 
-    // 启用源码映射（开发环境）
+    // 生产包禁用 sourcemap，避免发布源码映射
     sourcemap: false,
 
     // 优化输出目录结构

@@ -977,7 +977,6 @@ export const localSupportedTokens = new Set([
 	"epic",
 	"sd",
 	"grs",
-	"ads",
 	"clv",
 	"clanker",
 	"haedal",

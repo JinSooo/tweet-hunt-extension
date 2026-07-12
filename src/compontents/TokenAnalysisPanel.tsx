@@ -99,7 +99,7 @@ function TokenAnalysisPanel({
       onMouseOver={onMouseOver}
       style={{
         fontFamily:
-          'Lato, "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
       }}
     >
       {/* Header */}

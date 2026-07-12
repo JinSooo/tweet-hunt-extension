@@ -13,19 +13,21 @@ import {
 } from '~utils/notificationEvents';
 import { TopTabNavigator } from '../TopTabNavigator';
 import { useCrossPageSettings } from '~utils/settingsManager';
-import { getActiveHunterCampaignsAsync } from '../HunterCampaign/campaignConfigs';
+import { getActiveHunterCampaignsByDomainAsync } from '../HunterCampaign/campaignConfigs';
 import { ProRequired } from '../ProRequired';
 import { LoginRequired } from '../LoginRequired';
 import { HunterEarnSection } from '../HunterEarnSection';
 import ErrorBoundary from '../ErrorBoundary';
-import AdBannerSection from '../AdBannerSection';
+import FeatureBannerSection from '../FeatureBannerSection';
 
 export interface Web3HomeSidebarProps {
   className?: string;
+  active?: boolean;
 }
 
 export function Web3HomeSidebar({
   className = '',
+  active = true,
 }: Web3HomeSidebarProps) {
   const [activeTopTab, setActiveTopTab] = React.useState<
     'hot' | 'subs' | 'e2e'
@@ -35,8 +37,9 @@ export function Web3HomeSidebar({
   const [currentUsername] = useLocalStorage('@xhunt/current-username', '');
 
   const { data: activeHunterCampaigns = [] } = useRequest(
-    getActiveHunterCampaignsAsync,
+    () => getActiveHunterCampaignsByDomainAsync('web3'),
     {
+      ready: active,
       pollingInterval: 200_000,
       pollingWhenHidden: false,
     }
@@ -161,14 +164,18 @@ export function Web3HomeSidebar({
         flexDirection: 'column',
       }}
     >
-      {isEnabled('showAdBanner') && (
-        <ErrorBoundary name='AdBannerSection'>
-          <AdBannerSection />
+      {isEnabled('showFeatureSlot') && (
+        <ErrorBoundary name='FeatureBannerSection'>
+          <FeatureBannerSection />
         </ErrorBoundary>
       )}
 
       <ErrorBoundary name='HunterEarnSection'>
-        <HunterEarnSection activeHunterCampaigns={activeHunterCampaigns} key={currentUsername} />
+        <HunterEarnSection
+          active={active}
+          activeHunterCampaigns={activeHunterCampaigns}
+          key={currentUsername}
+        />
       </ErrorBoundary>
 
       {topTabs.length > 1 && (

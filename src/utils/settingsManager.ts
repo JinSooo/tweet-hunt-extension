@@ -14,8 +14,9 @@ export const settingsConfig = {
     { key: 'showTweetAIAnalysis', label: 'showTweetAIAnalysis' },
     { key: 'showSearchPanel', label: 'showProfileChanges' },
     { key: 'showAnnualReport', label: 'showAnnualReport' },
-    { key: 'showAdBanner', label: 'showAdBanner' },
-    { key: 'showHotTrending', label: 'showHotTrending' },
+    { key: 'showFeatureSlot', label: 'showFeatureSlot' },
+    { key: 'showHotTrendingWeb3', label: 'showHotTrendingWeb3' },
+    { key: 'showHotTrendingAi', label: 'showHotTrendingAi' },
     { key: 'showHunterCampaign', label: 'showHunterCampaign' },
     { key: 'showNotes', label: 'showNotes' },
     { key: 'showOfficialTags', label: 'showOfficialTags' },
@@ -41,15 +42,17 @@ export const settingsConfig = {
     { key: 'showNarrative', label: 'showNarrative' },
   ],
   followedRight: [
-    { key: 'showKolFollowers', label: 'showKolFollowers' },
-    { key: 'showTop100Kols', label: 'showTop100Kols' },
-    { key: 'showCnKols', label: 'showCnKols' },
     { key: 'showFqRank', label: 'showFqRank' },
     { key: 'showCnRank', label: 'showCnRank' },
     { key: 'showEnInfluenceRank', label: 'showEnInfluenceRank' },
     { key: 'showProjectRank', label: 'showProjectRank' },
+    { key: 'showFqRankAi', label: 'showFqRankAi' },
+    { key: 'showCnRankAi', label: 'showCnRankAi' },
+    { key: 'showEnInfluenceRankAi', label: 'showEnInfluenceRankAi' },
+    { key: 'showProjectRankAi', label: 'showProjectRankAi' },
     { key: 'showReviews', label: 'showReviews' },
     { key: 'showGhostFollowing', label: 'showGhostFollowing' },
+    { key: 'showAiAvatarButton', label: 'showAiAvatarButton' },
   ],
 };
 
@@ -62,8 +65,9 @@ const ALL_SETTING_KEYS = [
   'showTweetAIAnalysis',
   'showSearchPanel',
   'showAnnualReport',
-  'showAdBanner',
-  'showHotTrending',
+  'showFeatureSlot',
+  'showHotTrendingWeb3',
+  'showHotTrendingAi',
   'showHunterCampaign',
   'showNotes',
   'showOfficialTags',
@@ -85,17 +89,37 @@ const ALL_SETTING_KEYS = [
   'showSoulIndex',
   'showNarrative',
   'showArticleBottomRightArea',
-  'showKolFollowers',
-  'showTop100Kols',
-  'showCnKols',
+  'showWeb3KolFollowers',
+  'showAiKolFollowers',
+  'showTop100KolsWeb3',
+  'showTop100KolsAi',
+  'showCnKolsWeb3',
+  'showCnKolsAi',
   'showFqRank',
   'showCnRank',
   'showEnInfluenceRank',
   'showProjectRank',
+  'showFqRankAi',
+  'showCnRankAi',
+  'showEnInfluenceRankAi',
+  'showProjectRankAi',
   'showReviews',
   'showGhostFollowing',
   'showApiAccess', // API Access 板块（隐藏设置，不在 UI 显示开关）
+  'showAiDetectButton',
+  'showAiAvatarButton',
+  'showAiAvatarButton_official',
+  'showAiAvatarButton_unofficial',
 ] as const;
+
+const DEFAULT_SETTING_VALUES: Partial<
+  Record<(typeof ALL_SETTING_KEYS)[number], boolean>
+> = {
+  showRealtimeSubscription: false,
+};
+
+const getDefaultSettingValue = (key: string): boolean =>
+  DEFAULT_SETTING_VALUES[key as (typeof ALL_SETTING_KEYS)[number]] ?? true;
 
 /**。定义基础功能，即便config没有加载出来，
  * 不清楚当前用户是不是测试用户，也能看到的一些功能
@@ -108,7 +132,8 @@ const BASE_SETTING_KEYS: string[] = [
   'showTokenAnalysis',
   'showTweetAIAnalysis',
   'showSearchPanel',
-  'showHotTrending',
+  'showHotTrendingWeb3',
+  'showHotTrendingAi',
   'showNotes',
   'showOfficialTags',
   'showProjectMembers',
@@ -123,15 +148,24 @@ const BASE_SETTING_KEYS: string[] = [
   'showKolAbilityModel',
   'showSoulIndex',
   'showNarrative',
-  'showKolFollowers',
-  'showTop100Kols',
-  'showCnKols',
+  'showWeb3KolFollowers',
+  'showAiKolFollowers',
+  'showTop100KolsWeb3',
+  'showTop100KolsAi',
+  'showCnKolsWeb3',
+  'showCnKolsAi',
   'showFqRank',
   'showCnRank',
   'showEnInfluenceRank',
   'showProjectRank',
+  'showFqRankAi',
+  'showCnRankAi',
+  'showEnInfluenceRankAi',
+  'showProjectRankAi',
   'showReviews',
   'showGhostFollowing',
+  'showAiDetectButton',
+  'showAiAvatarButton',
 ];
 
 // 事件管理器
@@ -181,16 +215,19 @@ export class SettingsManager {
     for (const key of ALL_SETTING_KEYS) {
       try {
         const value = await localStorageInstance.get(`@settings/${key}`);
-        this.settings.set(key, typeof value === 'boolean' ? value : true);
+        this.settings.set(
+          key,
+          typeof value === 'boolean' ? value : getDefaultSettingValue(key),
+        );
       } catch (error) {
         console.log(`Failed to load setting ${key}:`, error);
-        this.settings.set(key, true);
+        this.settings.set(key, getDefaultSettingValue(key));
       }
     }
   }
 
   public isEnabled(settingKey: string): boolean {
-    return this.settings.get(settingKey) ?? true;
+    return this.settings.get(settingKey) ?? getDefaultSettingValue(settingKey);
   }
 
   public async updateSetting(settingKey: string, value: boolean) {
@@ -233,10 +270,13 @@ export const useAllSettings = () => {
     for (const key of keys) {
       try {
         const value = await localStorageInstance.get(`@settings/${key}`);
-        newSettings.set(key, typeof value === 'boolean' ? value : true);
+        newSettings.set(
+          key,
+          typeof value === 'boolean' ? value : getDefaultSettingValue(key),
+        );
       } catch (error) {
         console.log(`Failed to load setting ${key}:`, error);
-        newSettings.set(key, true);
+        newSettings.set(key, getDefaultSettingValue(key));
       }
     }
 
@@ -262,7 +302,7 @@ export const useAllSettings = () => {
 
   // 获取设置值
   const getSetting = (key: string): boolean => {
-    return settings.get(key) ?? true;
+    return settings.get(key) ?? getDefaultSettingValue(key);
   };
 
   // 初始化加载
@@ -271,13 +311,16 @@ export const useAllSettings = () => {
   }, []);
 
   // 生成设置状态映射
-  const settingStates = getAllSettingKeys().reduce((acc, key) => {
-    acc[key] = {
-      get: getSetting(key),
-      set: (value: boolean) => updateSetting(key, value),
-    };
-    return acc;
-  }, {} as Record<string, { get: boolean; set: (value: boolean) => void }>);
+  const settingStates = getAllSettingKeys().reduce(
+    (acc, key) => {
+      acc[key] = {
+        get: getSetting(key),
+        set: (value: boolean) => updateSetting(key, value),
+      };
+      return acc;
+    },
+    {} as Record<string, { get: boolean; set: (value: boolean) => void }>,
+  );
 
   return { settingStates, isLoading };
 };
@@ -286,123 +329,163 @@ export const useAllSettings = () => {
 // (useReactiveSettings removed; use useCrossPageSettings instead)
 
 // 跨页面设置同步Hook - 用于popup和content script之间的通信
+interface CrossPageSettingsSnapshot {
+  settings: Map<string, boolean>;
+  currentUsername: string;
+  disableTesting: boolean;
+}
+
+const crossPageSettingsSubscribers = new Set<() => void>();
+let crossPageSettingsSnapshot: CrossPageSettingsSnapshot = {
+  settings: new Map(),
+  currentUsername: '',
+  disableTesting: false,
+};
+let crossPageSettingsStarted = false;
+let crossPageSettingsInitPromise: Promise<void> | null = null;
+
+const emitCrossPageSettingsChange = () => {
+  crossPageSettingsSubscribers.forEach((callback) => callback());
+};
+
+const setCrossPageSettingsSnapshot = (
+  next:
+    | CrossPageSettingsSnapshot
+    | ((prev: CrossPageSettingsSnapshot) => CrossPageSettingsSnapshot),
+) => {
+  crossPageSettingsSnapshot =
+    typeof next === 'function' ? next(crossPageSettingsSnapshot) : next;
+  emitCrossPageSettingsChange();
+};
+
+const loadCrossPageCurrentUser = async (): Promise<string> => {
+  try {
+    const initial: any = await localStorageInstance.get(
+      '@xhunt/initial-state-current-user',
+    );
+    const fallback = (await localStorageInstance.get(
+      '@xhunt/current-username',
+    )) as string;
+    const uname =
+      sanitizeUsername(initial?.screen_name) ||
+      sanitizeUsername(fallback) ||
+      '';
+
+    let nextDisableTesting = false;
+    try {
+      const key = `@settings/disableTesting/${uname || '_'}`;
+      const v = await localStorageInstance.get(key);
+      nextDisableTesting = Boolean(v);
+    } catch {}
+
+    setCrossPageSettingsSnapshot((prev) => ({
+      ...prev,
+      currentUsername: uname,
+      disableTesting: nextDisableTesting,
+    }));
+    return uname;
+  } catch {
+    setCrossPageSettingsSnapshot((prev) => ({
+      ...prev,
+      currentUsername: '',
+      disableTesting: false,
+    }));
+    return '';
+  }
+};
+
+const loadCrossPageSettings = async () => {
+  const entries = await Promise.all(
+    ALL_SETTING_KEYS.map(async (key) => {
+      try {
+        const value = await localStorageInstance.get(`@settings/${key}`);
+        return [
+          key,
+          typeof value === 'boolean' ? value : getDefaultSettingValue(key),
+        ] as const;
+      } catch (error) {
+        console.log(`Failed to load setting ${key}:`, error);
+        return [key, getDefaultSettingValue(key)] as const;
+      }
+    }),
+  );
+
+  setCrossPageSettingsSnapshot((prev) => ({
+    ...prev,
+    settings: new Map(entries),
+  }));
+};
+
+const startCrossPageSettingsStore = () => {
+  if (crossPageSettingsInitPromise) return crossPageSettingsInitPromise;
+
+  crossPageSettingsInitPromise = (async () => {
+    await loadCrossPageSettings();
+    await loadCrossPageCurrentUser();
+
+    if (crossPageSettingsStarted) return;
+    crossPageSettingsStarted = true;
+
+    const handleStorageChange = ALL_SETTING_KEYS.reduce(
+      (acc, key) => {
+        acc[`@settings/${key}`] = () => {
+          void loadCrossPageSettings();
+        };
+        return acc;
+      },
+      {} as Record<string, () => void>,
+    );
+
+    localStorageInstance.watch({
+      ...handleStorageChange,
+      '@xhunt/initial-state-current-user': () => {
+        void loadCrossPageCurrentUser();
+      },
+      '@xhunt/current-username': () => {
+        void loadCrossPageCurrentUser();
+      },
+    });
+
+    eventManager.on(
+      'settingChanged',
+      async (data: { key: string; value: boolean }) => {
+        if (data.key === 'disableTesting') {
+          await loadCrossPageCurrentUser();
+          return;
+        }
+
+        setCrossPageSettingsSnapshot((prev) => {
+          const nextSettings = new Map(prev.settings);
+          nextSettings.set(data.key, data.value);
+          return {
+            ...prev,
+            settings: nextSettings,
+          };
+        });
+      },
+    );
+  })();
+
+  return crossPageSettingsInitPromise;
+};
+
 export const useCrossPageSettings = () => {
-  const [settings, setSettings] = useState<Map<string, boolean>>(new Map());
-  const [currentUsername, setCurrentUsername] = useState<string>('');
-  const [disableTesting, setDisableTesting] = useState<boolean>(false);
+  const [snapshot, setSnapshot] = useState<CrossPageSettingsSnapshot>(
+    crossPageSettingsSnapshot,
+  );
 
   useEffect(() => {
-    // 从存储加载当前用户名并同步其专属的 disableTesting
-    const loadCurrentUser = async (): Promise<string> => {
-      try {
-        const initial: any = await localStorageInstance.get(
-          '@xhunt/initial-state-current-user'
-        );
-        const fallback = (await localStorageInstance.get(
-          '@xhunt/current-username'
-        )) as string;
-        const uname =
-          sanitizeUsername(initial?.screen_name) ||
-          sanitizeUsername(fallback) ||
-          '';
-        setCurrentUsername(uname);
-        try {
-          const key = `@settings/disableTesting/${uname || '_'}`;
-          const v = await localStorageInstance.get(key);
-          setDisableTesting(Boolean(v));
-        } catch { }
-        return uname;
-      } catch {
-        setCurrentUsername('');
-        setDisableTesting(false);
-        return '';
-      }
-    };
+    const handleChange = () => setSnapshot(crossPageSettingsSnapshot);
+    crossPageSettingsSubscribers.add(handleChange);
+    void startCrossPageSettingsStore();
+    handleChange();
 
-    const loadSettings = async () => {
-      const newSettings = new Map();
-
-      for (const key of ALL_SETTING_KEYS) {
-        try {
-          const value = await localStorageInstance.get(`@settings/${key}`);
-          newSettings.set(key, value !== null ? value : true);
-        } catch (error) {
-          console.log(`Failed to load setting ${key}:`, error);
-          newSettings.set(key, true);
-        }
-      }
-
-      setSettings(newSettings);
-    };
-
-    // 监听Plasmo Storage变更事件
-    const handleStorageChange = ALL_SETTING_KEYS.reduce((acc, key) => {
-      acc[`@settings/${key}`] = () => loadSettings();
-      return acc;
-    }, {} as Record<string, () => void>);
-    // 监听用户名变更（仅当初始未获取到用户名时注册）
-    let handleUserChange: Record<string, () => void> = {};
-
-    // 监听自定义事件（同页面内同步）
-    const handleSettingChange = (data: { key: string; value: boolean }) => {
-      setSettings((prev) => {
-        const newSettings = new Map(prev);
-        newSettings.set(data.key, data.value);
-        return newSettings;
-      });
-      // 若是与 disableTesting 相关的事件，重新同步一次用户与其开关
-      if (data.key === 'disableTesting') {
-        // 不依赖现有用户名，直接从存储读取，确保首次用户名到达后也会生效
-        (async () => {
-          try {
-            const initial: any = await localStorageInstance.get(
-              '@xhunt/initial-state-current-user'
-            );
-            const fallback = (await localStorageInstance.get(
-              '@xhunt/current-username'
-            )) as string;
-            const uname =
-              sanitizeUsername(initial?.screen_name) ||
-              sanitizeUsername(fallback) ||
-              '';
-            setCurrentUsername(uname);
-            const key = `@settings/disableTesting/${uname || '_'}`;
-            const v = await localStorageInstance.get(key);
-            setDisableTesting(Boolean(v));
-          } catch {
-            setCurrentUsername('');
-            setDisableTesting(false);
-          }
-        })();
-      }
-    };
-
-    // 初始加载并按需注册监听
-    (async () => {
-      await loadSettings();
-      const uname = await loadCurrentUser();
-      handleUserChange = !uname
-        ? {
-          '@xhunt/initial-state-current-user': () => loadCurrentUser(),
-          '@xhunt/current-username': () => loadCurrentUser(),
-        }
-        : {};
-      localStorageInstance.watch({
-        ...handleStorageChange,
-        ...handleUserChange,
-      });
-      eventManager.on('settingChanged', handleSettingChange);
-    })();
-
-    // 清理函数
     return () => {
-      localStorageInstance.unwatch({
-        ...handleStorageChange,
-        ...handleUserChange,
-      });
-      eventManager.off('settingChanged', handleSettingChange);
+      crossPageSettingsSubscribers.delete(handleChange);
     };
   }, []);
+
+  const { settings, currentUsername, disableTesting } = snapshot;
 
   const isEnabled = (settingKey: string): boolean => {
     const cfg: any = configManager.getConfig();
@@ -421,7 +504,7 @@ export const useCrossPageSettings = () => {
     // 优先检查 flexibleTesting（优先级最高）
     if (flexibleTesting && flexibleTesting[settingKey]) {
       const allowedUsers = flexibleTesting[settingKey].map((u: string) =>
-        typeof u === 'string' ? u.toLowerCase() : u
+        typeof u === 'string' ? u.toLowerCase() : u,
       );
       const uname =
         typeof currentUsername === 'string'
@@ -429,7 +512,7 @@ export const useCrossPageSettings = () => {
           : '';
       // 如果功能在 flexibleTesting 中，直接展示给用户
       if (uname && allowedUsers.includes(uname)) {
-        return settings.get(settingKey) ?? true;
+        return settings.get(settingKey) ?? getDefaultSettingValue(settingKey);
       }
       return false; // 用户没在列表中，不展示给用户
     }
@@ -444,7 +527,7 @@ export const useCrossPageSettings = () => {
       return false;
     }
 
-    return settings.get(settingKey) ?? true;
+    return settings.get(settingKey) ?? getDefaultSettingValue(settingKey);
   };
 
   const isTesterFor = (settingKey: string): boolean => {
@@ -455,7 +538,7 @@ export const useCrossPageSettings = () => {
     }
     const features = testConfig?.features || [];
     const testers = (testConfig?.testers || []).map((u: string) =>
-      typeof u === 'string' ? u.toLowerCase() : u
+      typeof u === 'string' ? u.toLowerCase() : u,
     );
     if (!features.includes(settingKey)) return false;
     const uname =
@@ -472,7 +555,7 @@ export const useCrossPageSettings = () => {
     }
     const features = cfg?.canaryConfig?.features || [];
     const canaries = (cfg?.canaryConfig?.canaries || []).map((u: string) =>
-      typeof u === 'string' ? u.toLowerCase() : u
+      typeof u === 'string' ? u.toLowerCase() : u,
     );
     if (!features.includes(settingKey)) return false;
     const uname =
@@ -485,7 +568,7 @@ export const useCrossPageSettings = () => {
   const isCanaryUser = (() => {
     const cfg: any = configManager.getConfig();
     const canaries = (cfg?.canaryConfig?.canaries || []).map((u: string) =>
-      typeof u === 'string' ? u.toLowerCase() : u
+      typeof u === 'string' ? u.toLowerCase() : u,
     );
     const uname =
       typeof currentUsername === 'string' ? currentUsername.toLowerCase() : '';
@@ -496,7 +579,7 @@ export const useCrossPageSettings = () => {
   const isTesterOnly = (() => {
     const { testConfig } = configManager.getConfig();
     const testers = (testConfig?.testers || []).map((u: string) =>
-      typeof u === 'string' ? u.toLowerCase() : u
+      typeof u === 'string' ? u.toLowerCase() : u,
     );
     const uname =
       typeof currentUsername === 'string' ? currentUsername.toLowerCase() : '';
@@ -511,13 +594,16 @@ export const useCrossPageSettings = () => {
   })();
 
   const updateDisableTesting = async (value: boolean) => {
-    setDisableTesting(value);
+    setCrossPageSettingsSnapshot((prev) => ({
+      ...prev,
+      disableTesting: value,
+    }));
     try {
       const key = `@settings/disableTesting/${currentUsername || '_'}`;
       await localStorageInstance.set(key, value);
       // 通知其他实例同步该开关
       eventManager.emit('settingChanged', { key: 'disableTesting', value });
-    } catch { }
+    } catch {}
   };
 
   return {

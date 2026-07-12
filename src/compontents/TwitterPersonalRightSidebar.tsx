@@ -4,6 +4,7 @@ import { PersonalAnalysisPanel } from './PersonalAnalysisPanel';
 import { useCrossPageSettings } from '~utils/settingsManager';
 import { HunterCampaignBanner } from './HunterCampaign/HunterCampaignBanner';
 import { getActiveCampaignForUserAsync } from './HunterCampaign/campaignConfigs';
+import { CampaignProviderBadge } from './HunterCampaign/CampaignProviderBadge';
 import { LoginRequired } from './LoginRequired';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -60,6 +61,9 @@ export function TwitterPersonalRightSidebar({
       {/* Campaign Banner at the very top - 独立控制 */}
       {activeHunterCampaignConfig && isEnabled('showHunterCampaign') && (
         <div className='px-3 pt-3'>
+          <div className='mb-2 flex justify-center'>
+            <CampaignProviderBadge variant='topbar' />
+          </div>
           <HunterCampaignBanner
             unregisteredMode='collapsed'
             showMantleHunterComponents={
