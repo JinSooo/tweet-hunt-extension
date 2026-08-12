@@ -193,6 +193,7 @@ function _FixedTwitterPanel({
         className='relative'
         data-key={showPanel}
         data-xhunt-exclude={'true'}
+        data-xhunt-testid='fixed-twitter-panel'
       >
         {/* 缩小状态：显示图标（延迟 100ms 显示，立即隐藏） */}
         {isMinimized && showIcon && (

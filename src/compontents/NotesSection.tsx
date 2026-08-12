@@ -240,6 +240,7 @@ function _NotesSection({ userId, twitterId, reviewInfo }: NotesSectionProps) {
             ) : calcDisplayNote && token ? (
               // 已有备注状态
               <div
+                data-xhunt-testid='note-entry'
                 className='inline-flex h-[22px] max-w-[160px] cursor-pointer items-center rounded-full px-2 text-[12px] leading-none theme-text-tertiary transition-colors hover:theme-text-secondary'
                 onClick={handleEdit}
                 title={calcDisplayNote}
@@ -251,6 +252,7 @@ function _NotesSection({ userId, twitterId, reviewInfo }: NotesSectionProps) {
             ) : (
               // 未备注状态
               <div
+                data-xhunt-testid='note-entry'
                 ref={targetRef}
                 onClick={handleEdit}
                 className='inline-flex h-[22px] cursor-pointer items-center rounded-full px-2 text-[12px] leading-none theme-text-tertiary opacity-60 transition-colors hover:theme-text-secondary hover:opacity-100'
@@ -276,6 +278,7 @@ function _NotesSection({ userId, twitterId, reviewInfo }: NotesSectionProps) {
             >
               <div
                 data-theme={theme}
+                data-xhunt-testid='note-editor'
                 className='w-[280px] theme-bg-secondary rounded-2xl p-3.5 space-y-3 shadow-[0_12px_32px_rgba(0,0,0,0.22)] border theme-border'
               >
                 <div className='flex items-center gap-2'>
@@ -290,6 +293,7 @@ function _NotesSection({ userId, twitterId, reviewInfo }: NotesSectionProps) {
                 {/* Note textarea */}
                 <div>
                   <textarea
+                    data-xhunt-testid='note-input'
                     ref={textareaRef}
                     value={noteText}
                     onChange={handleTextareaChange}
@@ -338,6 +342,7 @@ function _NotesSection({ userId, twitterId, reviewInfo }: NotesSectionProps) {
                 {/* Action buttons */}
                 <div className='flex gap-2 pt-1'>
                   <button
+                    data-xhunt-testid='note-save-button'
                     onClick={handleSave}
                     disabled={savingNote}
                     className='flex-1 py-2 rounded-full text-white text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-[#1d9bf0] hover:bg-[#1a8cd8] flex items-center justify-center gap-2 shadow-sm'
@@ -346,6 +351,7 @@ function _NotesSection({ userId, twitterId, reviewInfo }: NotesSectionProps) {
                     {t('save')}
                   </button>
                   <button
+                    data-xhunt-testid='note-cancel-button'
                     onClick={handleCancel}
                     disabled={savingNote}
                     className='px-4 py-2 rounded-full text-sm font-medium theme-text-secondary hover:theme-text-primary theme-hover transition-all duration-200 disabled:opacity-50'

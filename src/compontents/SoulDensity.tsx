@@ -19,6 +19,54 @@ interface SoulDensityProps {
   loadingTwInfo?: boolean;
 }
 
+const formatSoulUpdateDate = (value?: string | number | null) => {
+  if (value === undefined || value === null) return '';
+
+  const raw = String(value).trim();
+  if (!raw) return '';
+
+  const pad = (num: string | number) => String(num).padStart(2, '0');
+  const formatDate = (date: Date) =>
+    `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}`;
+
+  const dateOnlyMatch = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (dateOnlyMatch) {
+    return `${dateOnlyMatch[1]}/${pad(dateOnlyMatch[2])}/${pad(
+      dateOnlyMatch[3]
+    )}`;
+  }
+
+  const numericValue = Number(raw);
+  if (Number.isFinite(numericValue)) {
+    const timestamp =
+      numericValue > 0 && numericValue < 1_000_000_000_000
+        ? numericValue * 1000
+        : numericValue;
+    const date = new Date(timestamp);
+    if (!Number.isNaN(date.getTime())) return formatDate(date);
+  }
+
+  const date = new Date(raw);
+  if (!Number.isNaN(date.getTime())) return formatDate(date);
+
+  return raw;
+};
+
+const buildSoulFooter = (
+  template: string,
+  updateTime?: string | number | null
+) => {
+  const updateDate = formatSoulUpdateDate(updateTime);
+  if (!template) return '';
+  if (!updateDate) {
+    return template
+      .replace(/[，,]\s*(更新时间|Updated)\s*[:：]\s*\{date\}/i, '')
+      .replace(/\{date\}/g, '')
+      .trim();
+  }
+  return template.replace(/\{date\}/g, updateDate);
+};
+
 // 🆕 Canvas 安全配置
 const CANVAS_CONFIG = {
   MAX_WIDTH: 800,
@@ -89,10 +137,10 @@ function SoulDensity({
   const [theme] = useLocalStorage('@xhunt/theme', 'dark');
   const { t, lang } = useI18n();
   
-  // 灵魂指数数据说明话术（写死，从翻译文件读取）
+  // 灵魂指数数据说明话术：更新时间优先使用接口返回的 last_updated
   const soulFooter = useMemo(() => {
-    return t('soulFooter') || '';
-  }, [t]);
+    return buildSoulFooter(t('soulFooterWithUpdateDate') || '', data?.last_updated);
+  }, [t, data?.last_updated]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState(() =>

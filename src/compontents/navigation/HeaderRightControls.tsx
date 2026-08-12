@@ -190,6 +190,7 @@ export const HeaderRightControls: React.FC<HeaderRightControlsProps> = ({
       {/* Settings Button */}
       <div className='relative'>
         <button
+          data-xhunt-testid='panel-settings-button'
           onClick={handleOpenSettings}
           className={`p-1.5 rounded-full theme-hover transition-colors cursor-pointer ${activeGuide === 'settings' ? guideButtonClass : ''}`}
           title={t('settings')}
@@ -221,6 +222,7 @@ export const HeaderRightControls: React.FC<HeaderRightControlsProps> = ({
       {/* Messages Button */}
       <div className='relative'>
         <button
+          data-xhunt-testid='panel-messages-button'
           onClick={handleOpenMessages}
           className={`p-1.5 rounded-full theme-hover transition-colors cursor-pointer relative ${activeGuide === 'messages' ? guideButtonClass : ''}`}
           title={t('messages')}
@@ -250,6 +252,7 @@ export const HeaderRightControls: React.FC<HeaderRightControlsProps> = ({
         (onMinimize || contextOnMinimize) && (
           <div className='relative'>
             <button
+              data-xhunt-testid='panel-minimize-button'
               onClick={() => {
                 dismissGuide('panel');
                 (onMinimize || contextOnMinimize)?.();
@@ -268,6 +271,7 @@ export const HeaderRightControls: React.FC<HeaderRightControlsProps> = ({
       {floatingPanelMode === 'default' && onClose && (
         <div className='relative'>
           <button
+            data-xhunt-testid='panel-close-button'
             className={`p-1.5 rounded-full theme-hover transition-colors cursor-pointer ${activeGuide === 'panel' ? guideButtonClass : ''}`}
             onClick={() => {
               dismissGuide('panel');

@@ -423,6 +423,7 @@ function _TweetDetailButton({ }: TweetDetailButtonProps) {
   return ReactDOM.createPortal(
     <div
       data-theme={theme}
+      data-xhunt-testid='tweet-detail-button'
       className='inline-flex items-center'
       style={{ marginLeft: '4px' }}
     >

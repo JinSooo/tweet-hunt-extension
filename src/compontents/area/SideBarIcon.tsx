@@ -198,6 +198,7 @@ function _SideBarIcon() {
 
   return ReactDOM.createPortal(
     <div
+      data-xhunt-testid='sidebar-icon'
       className={`sidebarItem ${isExpanded ? 'sidebarItemExpanded' : ''}`}
       onClick={() => {
         if (!isSetupCompleted) {

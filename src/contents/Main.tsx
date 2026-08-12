@@ -141,6 +141,7 @@ function MainContent({
       data-theme={theme}
       data-xhunt-avatar-rank-mode={avatarRankMode}
       data-xhunt-exclude={'true'}
+      data-xhunt-testid='main-root'
       key={`${theme}-${avatarRankMode}-${token}-main-content`}
       style={{
         display: 'contents',

@@ -155,3 +155,14 @@ script/rank_1000.xlsx
 .history
 .vscode
 other
+# Playwright / E2E secrets and reports
+tests/.auth/
+playwright-report/
+test-results/
+blob-report/
+# XHunt E2E generated latest report
+tests/e2e/reports/latest/*
+!tests/e2e/reports/latest/.gitkeep
+# AI code review generated latest report
+reports/code-review/latest/*
+!reports/code-review/latest/.gitkeep

@@ -462,7 +462,11 @@ function _NameRightData({
   );
 
   return ReactDOM.createPortal(
-    <div data-theme={theme} style={{ display: 'contents' }}>
+    <div
+      data-theme={theme}
+      data-xhunt-testid='name-right-data'
+      style={{ display: 'contents' }}
+    >
       <NotesSection
         userId={userId}
         twitterId={twitterId}
@@ -473,6 +477,7 @@ function _NameRightData({
           {compactInsightContent}
           <button
             type='button'
+            data-xhunt-testid='profile-insights-expand-button'
             aria-expanded={isInsightsExpanded}
             className='shrink-0 whitespace-nowrap px-0.5 text-sm leading-5 text-[#1D9BF0] hover:underline transition-colors'
             onClick={() => setIsInsightsExpanded((prev) => !prev)}
@@ -710,6 +715,7 @@ function _NameRightData({
           {shouldCollapseInsights && isInsightsExpanded && (
             <button
               type='button'
+              data-xhunt-testid='profile-insights-collapse-button'
               aria-expanded={isInsightsExpanded}
               className='ml-1 shrink-0 whitespace-nowrap px-1 text-[13px] leading-[18px] text-[#1D9BF0] hover:underline transition-colors'
               onClick={() => setIsInsightsExpanded(false)}

@@ -138,6 +138,7 @@ function _SearchBottomPanel({
     <div
       data-theme={theme}
       data-xhunt-exclude={'true'}
+      data-xhunt-testid='search-bottom-panel'
       className='search-bottom-panel-transition'
       data-xhunt-avatar-rank-mode={avatarRankMode}
       style={{

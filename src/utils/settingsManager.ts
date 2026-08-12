@@ -67,6 +67,7 @@ const ALL_SETTING_KEYS = [
   'showAnnualReport',
   'showFeatureSlot',
   'showHotTrendingWeb3',
+  'showReplyAlpha', // 抢评 Alpha（隐藏设置，不在 UI 显示开关）
   'showHotTrendingAi',
   'showHunterCampaign',
   'showNotes',

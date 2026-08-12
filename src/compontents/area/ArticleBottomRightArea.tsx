@@ -112,6 +112,7 @@ function _ArticleBottomRightArea() {
 
   return ReactDOM.createPortal(
     <button
+      data-xhunt-testid='article-bottom-right-area'
       data-article-id={articleId}
       type='button'
       ref={buttonRef}

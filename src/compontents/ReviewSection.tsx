@@ -245,7 +245,11 @@ function _ReviewSection({
     const isHalfStar = !isFullStar && starValue - 0.5 <= displayRating;
     const colorClass = getRatingColor(starValue, displayRating);
     return (
-      <div key={starValue} className='relative'>
+      <div
+        key={starValue}
+        data-xhunt-testid={`review-star-${starValue}`}
+        className='relative'
+      >
         {/* Left half (for half-star) */}
         <div
           className='absolute left-0 w-1/2 h-full cursor-pointer z-10'
@@ -290,7 +294,7 @@ function _ReviewSection({
   if (!stats) return null;
 
   return (
-    <div className='p-3.5 space-y-4'>
+    <div data-xhunt-testid='review-editor' className='p-3.5 space-y-4'>
       {/* Star Rating */}
       <div
         className='flex items-center gap-1.5 rounded-xl border theme-border px-3 py-2.5'
@@ -385,6 +389,7 @@ function _ReviewSection({
               const isTagIncluded = selectedTags.includes(tag);
               return (
                 <button
+                  data-xhunt-testid={`review-preset-tag-${tag}`}
                   key={tag}
                   onClick={() => {
                     if (selectedTags.length >= 5) {
@@ -421,6 +426,7 @@ function _ReviewSection({
 
       {/*comment */}
       <textarea
+        data-xhunt-testid='review-comment-input'
         maxLength={200}
         ref={textareaRef}
         value={comment}
@@ -445,6 +451,7 @@ function _ReviewSection({
       />
 
       <button
+        data-xhunt-testid='review-submit-button'
         onClick={handleSubmit}
         disabled={!rating || selectedTags.length === 0 || postReviewInfoLoading}
         className='w-full py-2.5 rounded-full text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-[#1d9bf0] hover:bg-[#1a8cd8] shadow-sm'
@@ -457,6 +464,7 @@ function _ReviewSection({
 
       {stats?.currentUserReview && (
         <button
+          data-xhunt-testid='review-delete-button'
           onClick={delReview}
           type='button'
           className='w-full py-1 text-sm font-medium text-red-500/80 transition-colors hover:text-red-600 focus:outline-none'

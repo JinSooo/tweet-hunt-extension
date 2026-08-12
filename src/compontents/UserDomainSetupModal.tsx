@@ -109,6 +109,7 @@ export const DomainCard: React.FC<DomainCardProps> = ({
   return (
     <button
       type='button'
+      data-xhunt-testid={`domain-card-${type}`}
       onClick={onToggle}
       className={`relative flex flex-col items-center cursor-pointer transition-all duration-200 ease flex-1 border ${compact ? 'py-2.5 px-2 rounded-xl min-w-[90px]' : 'py-3 px-3 rounded-2xl min-w-[120px]'}`}
       style={{
@@ -316,6 +317,7 @@ export const UserDomainSetupModal: React.FC<UserDomainSetupModalProps> = ({
   return createPortal(
     <div
       data-theme={theme}
+      data-xhunt-testid='user-domain-setup-modal'
       className='fixed inset-0 flex items-center justify-center'
       style={{
         opacity: isAnimating ? 1 : 0,
@@ -467,6 +469,7 @@ export const UserDomainSetupModal: React.FC<UserDomainSetupModalProps> = ({
                           <button
                             type='button'
                             key={domain}
+                            data-xhunt-testid={`domain-primary-${domain}`}
                             className='flex flex-col items-center flex-1 cursor-pointer py-1 rounded-lg transition-colors hover:theme-bg-tertiary/60'
                             onClick={() => setPrimaryDomain(domain)}
                             aria-label={`${t('domainPrimary') || '优先展示'} ${domain === 'web3' ? t('domainWeb3') || 'Web3' : t('domainAi') || 'AI'}`}
@@ -559,6 +562,7 @@ export const UserDomainSetupModal: React.FC<UserDomainSetupModalProps> = ({
                       <button
                         key={id}
                         type='button'
+                        data-xhunt-testid={`domain-avatar-skin-${id}`}
                         className='relative h-6 w-6 rounded-full transition-all'
                         style={{
                           background: skinColors.background,
@@ -585,6 +589,7 @@ export const UserDomainSetupModal: React.FC<UserDomainSetupModalProps> = ({
                   })}
                   <button
                     type='button'
+                    data-xhunt-testid='domain-avatar-rank-hide'
                     className='relative h-6 w-6 rounded-full transition-all'
                     style={{
                       background:
@@ -633,6 +638,7 @@ export const UserDomainSetupModal: React.FC<UserDomainSetupModalProps> = ({
               {setupStep === 'domain' ? (
                 <button
                   ref={btnRef}
+                  data-xhunt-testid='domain-setup-next'
                   onClick={handleNextStep}
                   disabled={isNextDisabled}
                   className='w-full py-2.5 px-4 rounded-full text-[13px] font-semibold text-white flex items-center justify-center transition-all border-none hover:opacity-90'
@@ -653,12 +659,14 @@ export const UserDomainSetupModal: React.FC<UserDomainSetupModalProps> = ({
                 <div className='flex items-center gap-2'>
                   <button
                     type='button'
+                    data-xhunt-testid='domain-setup-back'
                     onClick={() => setSetupStep('domain')}
                     className='h-9 px-4 rounded-full text-[13px] font-medium theme-text-secondary theme-bg-tertiary hover:theme-text-primary transition-colors'
                   >
                     {t('domainSetupBackButton') || '上一步'}
                   </button>
                   <button
+                    data-xhunt-testid='domain-setup-confirm'
                     onClick={handleConfirm}
                     className='h-9 flex-1 px-4 rounded-full text-[13px] font-semibold text-white transition-all border-none hover:opacity-90'
                     style={{

@@ -143,6 +143,7 @@ function _KolAiChatButton() {
 
   return ReactDOM.createPortal(
     <div
+      data-xhunt-testid='kol-ai-chat-button'
       style={{
         marginRight: 8,
         marginBottom: 12,

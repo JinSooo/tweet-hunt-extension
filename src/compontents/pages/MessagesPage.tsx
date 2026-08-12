@@ -70,7 +70,10 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
           <p className='text-sm text-blue-400'>{t('loading')}</p>
         </div>
       ) : (
-        <div className='flex-1 overflow-y-auto custom-scrollbar overflow-x-hidden'>
+        <div
+          data-xhunt-testid='messages-page'
+          className='flex-1 overflow-y-auto custom-scrollbar overflow-x-hidden'
+        >
           <InAppMessages />
         </div>
       )}

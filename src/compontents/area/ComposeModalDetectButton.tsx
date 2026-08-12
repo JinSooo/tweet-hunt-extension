@@ -438,6 +438,7 @@ function _DetectButton({ selector, targetStyle, disabledOpacity = 'opacity-40', 
   return ReactDOM.createPortal(
     <div
       data-theme={theme}
+      data-xhunt-testid={`${componentType}-detect-button`}
       className='inline-flex items-center'
       style={{ marginRight: '8px', direction: 'ltr' }}
     >

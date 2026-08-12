@@ -122,6 +122,7 @@ function _ReviewHeader({
             {!isCurrentUser && (
               <div className='ml-auto flex-shrink-0'>
                 <button
+                  data-xhunt-testid='review-open-button'
                   ref={targetRef}
                   onClick={() => {
                     containerRef.current?.toggle();
@@ -228,6 +229,7 @@ function _ReviewHeader({
               {!isCurrentUser && (
                 <div className='ml-auto'>
                   <button
+                    data-xhunt-testid='review-open-button'
                     ref={targetRef}
                     onClick={() => {
                       containerRef.current?.toggle();

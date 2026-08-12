@@ -94,6 +94,7 @@ function TokenAnalysisPanel({
     <div
       className='z-50 w-[560px] overflow-hidden rounded-2xl border theme-border theme-bg-secondary shadow-[0_18px_50px_rgba(15,23,42,0.24)] backdrop-blur-xl'
       data-xhunt-exclude={'true'}
+      data-xhunt-testid='token-analysis-panel'
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onMouseOver={onMouseOver}

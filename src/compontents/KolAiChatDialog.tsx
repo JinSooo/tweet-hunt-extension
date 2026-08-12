@@ -667,7 +667,10 @@ export function KolAiChatDialog() {
       className='bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 backdrop-blur-sm'
       onClose={handleContainerClose}
     >
-      <div className='lato-font w-[680px] h-[550px] flex flex-col theme-bg-secondary backdrop-blur-sm rounded-lg shadow-xl border theme-border relative overflow-hidden theme-text-primary'>
+      <div
+        data-xhunt-testid='kol-ai-chat-dialog'
+        className='lato-font w-[680px] h-[550px] flex flex-col theme-bg-secondary backdrop-blur-sm rounded-lg shadow-xl border theme-border relative overflow-hidden theme-text-primary'
+      >
         {/* 固定背景水印，不随内容滚动 */}
         <div className='absolute inset-0 z-0 flex items-center justify-center pointer-events-none select-none'>
           <div className='text-7xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent opacity-[0.06] -rotate-12 tracking-widest'>
@@ -715,6 +718,7 @@ export function KolAiChatDialog() {
           <div className='flex items-center gap-2 relative z-10'>
             {/* 清空历史按钮 */}
             <button
+              data-xhunt-testid='kol-ai-chat-clear'
               onClick={handleClearHistory}
               className='p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200 group cursor-pointer'
               title={t('aiChatClearHistory')}
@@ -724,6 +728,7 @@ export function KolAiChatDialog() {
 
             {/* 关闭按钮 */}
             <button
+              data-xhunt-testid='kol-ai-chat-close'
               onClick={handleClose}
               className='p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all duration-200 group cursor-pointer'
             >
@@ -869,6 +874,7 @@ export function KolAiChatDialog() {
           <div className='flex items-center gap-2'>
             <div className='flex-1 relative'>
               <input
+                data-xhunt-testid='kol-ai-chat-input'
                 type='text'
                 value={inputValue}
                 onChange={(e) => {
@@ -893,6 +899,7 @@ export function KolAiChatDialog() {
             </div>
             {isResponding ? (
               <button
+                data-xhunt-testid='kol-ai-chat-stop'
                 onClick={handleStopResponding}
                 className='h-10 w-10 rounded-lg transition-all duration-200 flex items-center justify-center shadow-sm bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100'
                 title={t('aiChatPause')}
@@ -901,6 +908,7 @@ export function KolAiChatDialog() {
               </button>
             ) : (
               <button
+                data-xhunt-testid='kol-ai-chat-send'
                 onClick={handleSendMessage}
                 disabled={
                   !inputValue.trim() ||

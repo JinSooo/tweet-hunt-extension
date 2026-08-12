@@ -292,6 +292,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       <div className='flex items-center gap-2'>
         {showBackButton && history.length > 1 && (
           <button
+            data-xhunt-testid='panel-back-button'
             onClick={goBack}
             className='p-1 rounded-full theme-hover transition-colors'
           >

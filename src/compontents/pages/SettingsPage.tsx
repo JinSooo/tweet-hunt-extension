@@ -566,6 +566,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     return (
       <div
         key={setting.key}
+        data-xhunt-testid={`settings-item-${setting.key}`}
         className={`flex items-center justify-between py-2 transition-colors hover:theme-bg-tertiary/40 ${
           isSubOption ? 'px-6' : 'px-3'
         } ${groupDisabled ? 'opacity-50 pointer-events-none' : ''}`}
@@ -595,6 +596,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         <label className={`relative inline-flex items-center shrink-0`}>
           <input
             type='checkbox'
+            data-xhunt-testid={`settings-toggle-${setting.key}`}
             className='sr-only peer'
             checked={state.get}
             disabled={isLastEnabled || groupDisabled}
@@ -642,10 +644,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     return (
       <div
         key={groupKey}
+        data-xhunt-testid={`settings-group-${groupKey}`}
         className='theme-bg-tertiary/70 ml-1 mr-1 rounded-xl mb-2 overflow-hidden'
       >
         {/* 分组标题 */}
         <div
+          data-xhunt-testid={`settings-group-header-${groupKey}`}
           className='flex items-center justify-between py-2 px-3 cursor-pointer hover:theme-bg-tertiary/50 transition-colors'
           onClick={() => toggleGroup(groupKey)}
         >
@@ -669,6 +673,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   <label className='relative inline-flex items-center cursor-pointer shrink-0'>
                     <div className='inline-flex items-center gap-2 theme-bg-tertiary rounded-full p-0.5'>
                       <button
+                        data-xhunt-testid='settings-floating-mode-default'
                         className={`px-2.5 py-1 text-[11px] rounded-full transition-colors ${
                           floatingPanelMode === 'default'
                             ? 'bg-xhunt-accent text-white'
@@ -679,6 +684,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                         {t('floatingPanelModeDefault')}
                       </button>
                       <button
+                        data-xhunt-testid='settings-floating-mode-persistent'
                         className={`px-2.5 py-1 text-[11px] rounded-full transition-colors ${
                           floatingPanelMode === 'persistent'
                             ? 'bg-xhunt-accent text-white'
@@ -698,6 +704,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   </span>
                   <div className='flex items-center gap-2'>
                     <input
+                      data-xhunt-testid='settings-panel-width-range'
                       type='range'
                       min={300}
                       max={400}
@@ -736,6 +743,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   <label className='relative inline-flex items-center cursor-pointer shrink-0'>
                     <div className='inline-flex items-center gap-2 theme-bg-tertiary rounded-full p-0.5'>
                       <button
+                        data-xhunt-testid='settings-language-en'
                         className={`px-2.5 py-1 text-[11px] rounded-full transition-colors ${
                           lang === 'en'
                             ? 'bg-xhunt-accent text-white'
@@ -746,6 +754,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                         EN
                       </button>
                       <button
+                        data-xhunt-testid='settings-language-zh'
                         className={`px-2.5 py-1 text-[11px] rounded-full transition-colors ${
                           lang === 'zh'
                             ? 'bg-xhunt-accent text-white'
@@ -838,7 +847,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <label className='relative inline-flex items-center cursor-pointer shrink-0'>
                   <div className='inline-flex items-center gap-2 theme-bg-tertiary rounded-full p-0.5'>
                     {domains.includes('web3') && (
-                      <button
+                        <button
+                          data-xhunt-testid='settings-avatar-rank-mode-web3'
                         disabled={domains.length === 1}
                         className={`px-2.5 py-1 text-[11px] rounded-full transition-colors ${
                           avatarRankMode === 'web3'
@@ -869,6 +879,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                     )}
                     {domains.includes('ai') && (
                       <button
+                        data-xhunt-testid='settings-avatar-rank-mode-ai'
                         disabled={domains.length === 1}
                         className={`px-2.5 py-1 text-[11px] rounded-full transition-colors ${
                           avatarRankMode === 'ai'
@@ -926,6 +937,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                     const isActive = currentSkin === id;
                     return (
                       <button
+                        data-xhunt-testid={`settings-avatar-skin-${id}`}
                         key={id}
                         type='button'
                         className={`relative w-5 h-5 rounded-md border-2 transition-all duration-200 ${
@@ -1071,7 +1083,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   // const [apiRiskAcknowledged, setApiRiskAcknowledged] = useState(false);
 
   return (
-    <div className='flex flex-col h-full min-h-0 relative'>
+    <div
+      data-xhunt-testid='settings-page'
+      className='flex flex-col h-full min-h-0 relative'
+    >
       <PanelHeader
         title={<span>{t('settingsTitle')}</span>}
         showBackButton={showBackButton}
@@ -1108,6 +1123,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 >
                   <div
                     className='flex items-center justify-between py-2 px-3 cursor-pointer hover:theme-bg-tertiary/50 transition-colors'
+                    data-xhunt-testid='settings-group-header-domainPreference'
                     onClick={() => toggleGroup('domainPreference')}
                   >
                     <span className='text-[12px] font-semibold theme-text-primary tracking-wide leading-4'>
@@ -1136,6 +1152,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                         <div className='flex items-center gap-2'>
                           <label className='relative inline-flex items-center shrink-0'>
                             <input
+                              data-xhunt-testid='settings-domain-toggle-web3'
                               type='checkbox'
                               className='sr-only peer'
                               checked={domains.includes('web3')}
@@ -1163,6 +1180,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                         <div className='flex items-center gap-2'>
                           <label className='relative inline-flex items-center shrink-0'>
                             <input
+                              data-xhunt-testid='settings-domain-toggle-ai'
                               type='checkbox'
                               className='sr-only peer'
                               checked={domains.includes('ai')}
@@ -1183,6 +1201,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                           </span>
                           <div className='inline-flex items-center gap-1 theme-bg-tertiary rounded-full p-0.5'>
                             <button
+                              data-xhunt-testid='settings-domain-primary-web3'
                               className={`px-2.5 py-0.5 text-[11px] rounded-full transition-colors ${
                                 primaryDomain === 'web3'
                                   ? 'bg-xhunt-accent text-white'
@@ -1196,6 +1215,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                               {/* {lang === 'zh' ? (t('domainWeb3Desc') || '区块链') : (t('domainWeb3') || 'Web3')} */}
                             </button>
                             <button
+                              data-xhunt-testid='settings-domain-primary-ai'
                               className={`px-2.5 py-0.5 text-[11px] rounded-full transition-colors ${
                                 primaryDomain === 'ai'
                                   ? 'bg-emerald-500 text-white'

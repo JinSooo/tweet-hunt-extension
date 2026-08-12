@@ -81,6 +81,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
   });
   // const [theme] = useLocalStorage('@xhunt/theme', 'dark');
   const { isEnabled } = useCrossPageSettings();
+  const showReplyAlpha = isEnabled('showReplyAlpha');
   const { hasAi } = useUserDomain();
   const [activeType, setActiveType] = useLocalStorage<ActiveType>(
     '@xhunt/hotProjectsActiveType',
@@ -97,13 +98,13 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
   >('hot');
   const [filterPanelExpanded, setFilterPanelExpanded] = useState(false);
   const [activeDays, setActiveDays] = useState<1 | 7>(1);
-  const [activeHours, setActiveHours] = useState<1 | 4 | 8 | 24>(4);
+  const [activeHours, setActiveHours] = useState<1 | 4 | 8 | 24>(24);
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
 
-  // 当切换到 tweet tab 时，默认用 4h；切回其它 tab 保持日维度
+  // 当切换到 tweet tab 时，默认用 24h；切回其它 tab 保持日维度
   useEffect(() => {
     if (activeType === 'tweet') {
-      setActiveHours(4);
+      setActiveHours(24);
     }
   }, [activeType]);
   const [region, setRegion] = useLocalStorage<'cn' | 'global' | ''>(
@@ -122,6 +123,12 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
       setActiveKolTab('traffic');
     }
   }, [activeKolTab, canShowInteractionKolTab]);
+
+  useEffect(() => {
+    if (!showReplyAlpha && activeType === 'reply') {
+      setActiveType('tweet');
+    }
+  }, [activeType, setActiveType, showReplyAlpha]);
 
   // 关注数据请求（原项目数据）
   const {
@@ -292,7 +299,9 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     }
 
     if (activeType === 'reply') {
-      fetchTrendingTweetsData();
+      if (showReplyAlpha) {
+        fetchTrendingTweetsData();
+      }
       return;
     }
 
@@ -310,6 +319,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     activeHours,
     activeMediaTab,
     currentRegion,
+    showReplyAlpha,
   ]);
 
   // 检查浏览器是否支持 View Transition API
@@ -321,6 +331,10 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     if (newType === activeType) return;
 
     const updateActiveType = () => {
+      if (newType === 'reply' && !showReplyAlpha) {
+        return;
+      }
+
       if (newType === 'reply') {
         setShowDaysDropdown(false);
       }
@@ -581,23 +595,27 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
           </div>
         ),
       },
-      {
-        id: 'reply' as const,
-        label: t('replyAlpha'),
-        icon: MessageSquare,
-        isNew: true,
-        tooltip: t('replyAlphaDescription'),
-        loading: trendingTweetsLoading,
-        hasData: replyAlphaItems.length > 0,
-        render: () => (
-          <div className='min-h-[360px] mt-1'>
-            <ReplyAlphaTweetList
-              items={replyAlphaItems}
-              lang={lang === 'zh' ? 'zh' : 'en'}
-            />
-          </div>
-        ),
-      },
+      ...(showReplyAlpha
+        ? [
+          {
+            id: 'reply' as const,
+            label: t('replyAlpha'),
+            icon: MessageSquare,
+            isNew: true,
+            tooltip: t('replyAlphaDescription'),
+            loading: trendingTweetsLoading,
+            hasData: replyAlphaItems.length > 0,
+            render: () => (
+              <div className='min-h-[360px] mt-1'>
+                <ReplyAlphaTweetList
+                  items={replyAlphaItems}
+                  lang={lang === 'zh' ? 'zh' : 'en'}
+                />
+              </div>
+            ),
+          },
+        ]
+        : []),
       {
         id: 'discussion' as const,
         label: t('discussions'),
@@ -688,6 +706,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
       mediaItems,
       personLoading,
       setTweetTagFilter,
+      showReplyAlpha,
       t,
       tokenLoading,
       topInfluencerItems,

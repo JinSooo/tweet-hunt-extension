@@ -360,7 +360,7 @@ function _FollowedRightData({
   }
 
   return ReactDOM.createPortal(
-    <>
+    <div data-xhunt-testid='followed-right-data' style={{ display: 'contents' }}>
       {loadingTwInfo ? (
         <FollowStatsSkeleton />
       ) : twInfo && (
@@ -893,7 +893,7 @@ function _FollowedRightData({
         ))}
 
       {/* 检测幽灵following按钮 - 只在当前用户的个人页面显示，且需要开启设置 */}
-    </>,
+    </div>,
     portalHost!,
   );
 }

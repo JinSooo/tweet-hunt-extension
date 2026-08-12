@@ -71,7 +71,10 @@ function _UserAuthPanel({
   // 未登录视图：底部显示图标 + 登录按钮
   if (!user || typeof user !== 'object' || !user?.username) {
     return (
-      <div className='sticky bottom-0 z-10 px-2 py-2 border-t theme-border theme-bg-secondary/95'>
+      <div
+        data-xhunt-testid='auth-logged-out-panel'
+        className='sticky bottom-0 z-10 px-2 py-2 border-t theme-border theme-bg-secondary/95'
+      >
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-1'>
             <a
@@ -111,6 +114,7 @@ function _UserAuthPanel({
           <div className='flex items-center gap-2'>
             <button
               type='button'
+              data-xhunt-testid='auth-login-button'
               onClick={redirectToLogin}
               className='inline-flex items-center gap-1 px-2 py-1 text-[11px] rounded-md border theme-border theme-text-secondary hover:theme-text-primary hover:theme-bg-tertiary transition-colors'
               title={t('loginRequired')}
@@ -126,6 +130,7 @@ function _UserAuthPanel({
 
   return (
     <div
+      data-xhunt-testid='auth-logged-in-panel'
       className='sticky bottom-0 theme-bg-secondary backdrop-blur-sm theme-border border-t'
       onMouseEnter={() => {
         if (!showLogout) {
@@ -210,6 +215,7 @@ function _UserAuthPanel({
         </div> */}
 
         <button
+          data-xhunt-testid='auth-user-menu-button'
           onClick={() => {
             setShowLogout(!showLogout);
             if (!showLogout) {
@@ -225,6 +231,7 @@ function _UserAuthPanel({
           <>
             <div className='absolute bottom-full right-0 mb-1 w-32 theme-bg-secondary rounded-lg shadow-lg theme-border overflow-hidden z-20'>
               <button
+                data-xhunt-testid='auth-logout-button'
                 onClick={() => {
                   setShowLogout(false);
                   logout().then((r) => r);

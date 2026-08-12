@@ -33,6 +33,7 @@ const AvatarRankBadge: React.FC<AvatarRankBadgeProps> = ({
       className={`xhunt-avatar-rank-badge ${
         rank && rank > 0 && rank <= 10000 ? 'high-ranked' : ''
       } ${isLoading ? 'loading' : ''}`}
+      data-xhunt-testid='avatar-rank-badge'
       data-theme={themeLocal || theme}
     >
       <span

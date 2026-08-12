@@ -52,7 +52,9 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
   const [activeMediaTab, setActiveMediaTab] = useState<'video' | 'photo'>(
     'video'
   );
-  const [activeHours, setActiveHours] = useState<number>(8);
+  const [activeHours, setActiveHours] = useState<number>(
+    activeType === 'model' ? 8 : 24
+  );
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const [showRegionDropdown, setShowRegionDropdown] = useState(false);
   const [showModelViewDropdown, setShowModelViewDropdown] = useState(false);
@@ -92,10 +94,10 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
     hotTag: null,
   });
 
-  // 切换到 tweet 默认 4h，切换到 model 默认 8h
+  // 切换到 tweet 默认 24h，切换到 model 默认 8h
   useEffect(() => {
     if (activeType === 'tweet') {
-      setActiveHours(4);
+      setActiveHours(24);
     } else if (activeType === 'model') {
       setActiveHours(8);
     }
