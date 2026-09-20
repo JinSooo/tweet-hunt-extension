@@ -38,6 +38,11 @@ import { avatarSkins } from '../../contents/constants/avatarSkins';
 import { useAvatarSkinState } from '~contents/hooks/useAvatarSkin';
 import { ApiAccessSection } from '~/compontents/ApiAccessSection';
 import { DomainCard, DomainType } from '~/compontents/UserDomainSetupModal';
+import { FeedCleanerSettingsSection } from '~/compontents/cleaner/FeedCleanerSettingsSection';
+import { PortalTooltip } from '~/compontents/PortalTooltip';
+// import { CloudSettingsSyncModal } from '~/compontents/CloudSettingsSyncModal';
+// import { getTwitterAuthUrl } from '~contents/services/api.ts';
+// import { openNewTab } from '~contents/utils';
 import { useUserDomain } from '~contents/hooks/useUserDomain';
 
 // Chrome 类型声明
@@ -77,14 +82,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const { skin: currentSkin, setSkinCustomized } = useAvatarSkinState();
   const { navigateTo } = useNavigation();
   const { settingStates, isLoading } = useAllSettings();
-  const {
-    disableTesting,
-    setDisableTesting,
-    isTesterOnly,
-    testersListStr,
-    isCanaryUser,
-    isEnabled,
-  } = useCrossPageSettings();
+  const { isCanaryUser, isEnabled } = useCrossPageSettings();
   // 本地缓存音频（单键存储）：{ url, data }
   const [sound, setSound, { isLoading: isSoundStoreLoading }] =
     useLocalStorage<{
@@ -101,6 +99,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     'default' | 'persistent'
   >('@xhunt/floatingPanelMode', 'default');
   const [token] = useLocalStorage('@xhunt/token', '');
+  // const [showCloudSyncModal, setShowCloudSyncModal] = useState(false);
   const [avatarRankMode, setAvatarRankMode] = useLocalStorage<'web3' | 'ai'>(
     '@settings/avatarRankMode',
     'web3',
@@ -259,9 +258,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     const testers: string[] =
       (cfg && cfg.testConfig && cfg.testConfig.testers) || [];
     const username = currentUsername || undefined;
-    const isTester = username
-      ? testers.includes(username) && !disableTesting
-      : false;
+    const isTester = username ? testers.includes(username) : false;
 
     const gated = new Set(features);
     const shouldShow = (k: string) => {
@@ -344,7 +341,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         { key: 'showAiDetectButton', label: 'showAiDetectButton' },
       ]),
     };
-  }, [currentUsername, disableTesting]);
+  }, [currentUsername]);
 
   // 分组展开状态管理
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
@@ -419,6 +416,24 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       }
     };
   }, []);
+
+  /*
+   * 同步配置暂未对用户开放。
+   * const handleCloudSyncClick = useLockFn(async () => {
+   *   if (!token) {
+   *     try {
+   *       const ret = await getTwitterAuthUrl();
+   *       if (ret?.url) {
+   *         openNewTab(ret.url);
+   *       }
+   *     } catch (err) {
+   *       console.error('[SettingsPage] Cloud sync login redirect failed:', err);
+   *     }
+   *     return;
+   *   }
+   *   setShowCloudSyncModal(true);
+   * });
+   */
 
   // 清理缓存（扩展本地存储 + 网页 localStorage 中与 xhunt 相关的键）
   const handleClearCache = async () => {
@@ -1110,6 +1125,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           >
             <div className='py-2'>
               <div className='ml-1 mr-1'>
+
+
                 {/* 分组设置：将基础设置放到最前 */}
                 {renderSettingsGroup(
                   'others',
@@ -1239,6 +1256,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   t('avatarSettings'),
                   groupedSettings.avatarSettings,
                 )}
+                {/* 信息流净化设置 */}
+                <FeedCleanerSettingsSection />
                 {renderSettingsGroup(
                   'profilePage',
                   t('profilePageSettings'),
@@ -1271,53 +1290,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   t('floatingPanelSettings'),
                   [],
                 )}
-                {/* 测试分组（仅测试者可见）*/}
-                {isTesterOnly && (
-                  <div className='theme-bg-tertiary/70 ml-1 mr-1 rounded-xl mb-2 overflow-hidden'>
-                    {/* 分组标题 */}
-                    <div className='flex items-center justify-between py-2 px-3 cursor-pointer hover:theme-bg-tertiary/50 transition-colors'>
-                      <span className='text-[12px] font-semibold theme-text-primary tracking-wide leading-4 flex items-center gap-1.5'>
-                        {t('testerSettings')}
-                        <span className='inline-flex items-center gap-1 group relative'>
-                          <Info className='w-3 h-3 theme-text-secondary/70 hover:theme-text-secondary cursor-pointer transition-colors' />
-                          <div className='absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-[11px] px-2 py-1 rounded shadow-lg z-10 min-w-[200px] max-w-[360px] whitespace-normal'>
-                            {t('testerSettingsInfo').replace(
-                              '{list}',
-                              testersListStr,
-                            )}
-                            <div className='absolute top-full left-4 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800'></div>
-                          </div>
-                        </span>
-                      </span>
-                    </div>
-                    {/* 分组内容 */}
-                    <div className='border-t theme-border'>
-                      <div className='flex items-center justify-between py-2 px-3'>
-                        <span className='text-[13px] theme-text-primary leading-tight inline-flex items-center gap-1.5'>
-                          {t('disableTesting')}
-                          <span className='inline-flex items-center gap-1 group relative'>
-                            <Info className='w-3 h-3 theme-text-secondary/70 hover:theme-text-secondary cursor-pointer transition-colors' />
-                            <div className='absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-[11px] px-2 py-1 rounded shadow-lg z-10 min-w-[200px] max-w-[360px] whitespace-normal'>
-                              {t('disableTestingInfo')}
-                              <div className='absolute top-full left-4 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800'></div>
-                            </div>
-                          </span>
-                        </span>
-                        <label className='relative inline-flex items-center shrink-0'>
-                          <input
-                            type='checkbox'
-                            className='sr-only peer'
-                            checked={disableTesting}
-                            onChange={(e) =>
-                              setDisableTesting(e.target.checked)
-                            }
-                          />
-                          <div className="relative w-9 h-5 bg-gray-500/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:shadow-sm after:transition-all peer-checked:bg-xhunt-accent"></div>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                )}
                 {/* 已合并：Profile 页面右侧栏设置并入 Profile 页面设置 */}
               </div>
               <div className='h-2' />
@@ -1327,15 +1299,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <div className='theme-bg-tertiary/70 ml-1 mr-1 rounded-xl mb-2 overflow-hidden'>
                   {/* 分组标题 */}
                   <div className='flex items-center justify-between py-2 px-3'>
-                    <div className='flex items-center gap-1.5 group relative'>
-                      <span className='text-[12px] font-semibold theme-text-primary tracking-wide leading-4 cursor-pointer'>
+                    <div className='flex items-center gap-1.5'>
+                      <span className='text-[12px] font-semibold theme-text-primary tracking-wide leading-4'>
                         {t('evmAddressBinding')}
                       </span>
-                      <Info className='w-3 h-3 theme-text-secondary/60 hover:theme-text-secondary cursor-pointer transition-colors' />
-                      <div className='absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded shadow-lg z-10 min-w-[200px] max-w-[320px] whitespace-normal'>
-                        {t('evmAddressBindingTip')}
-                        <div className='absolute top-full left-4 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-800'></div>
-                      </div>
+                      <PortalTooltip content={t('evmAddressBindingTip')} maxWidth={320}>
+                        <Info className='w-3 h-3 theme-text-secondary/60 hover:theme-text-secondary cursor-pointer transition-colors' />
+                      </PortalTooltip>
                     </div>
                   </div>
 
@@ -1502,33 +1472,59 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
               <div className='flex items-center gap-2'>
                 <span className='text-[11px] theme-text-secondary'>
-                  {t('version')} {packageJson.version}
+                  {lang === 'zh' ? `${t('version')} ` : ''}
+                  {packageJson.version}
                 </span>
-                <span
-                  className={`text-[11px] ${
-                    // isTesterOnly
-                    //   ? 'text-blue-800/60'
-                    isCanaryUser
-                      ? 'text-yellow-800/60 dark:text-yellow-300/70'
-                      : 'theme-text-secondary'
-                  }`}
+                {/*<span*/}
+                {/*  className={`text-[11px] ${*/}
+                {/*    // isTesterOnly*/}
+                {/*    //   ? 'text-blue-800/60'*/}
+                {/*    isCanaryUser*/}
+                {/*      ? 'text-yellow-800/60 dark:text-yellow-300/70'*/}
+                {/*      : 'theme-text-secondary'*/}
+                {/*  }`}*/}
+                {/*>*/}
+                {/*  {process.env.PLASMO_PUBLIC_ENV === 'dev' ? 'DEV' : 'BETA'}*/}
+                {/*</span>*/}
+                {/* 同步配置按钮暂未开放
+                <PortalTooltip
+                  content={t('cloudSyncNavTooltip')}
+                  maxWidth={240}
+                  fitContent
                 >
-                  {process.env.PLASMO_PUBLIC_ENV === 'dev' ? 'DEV' : 'BETA'}
-                </span>
+                  <button
+                    type='button'
+                    onClick={handleCloudSyncClick}
+                    className='inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2 py-1 text-[10px] rounded-lg border theme-border theme-text-secondary hover:theme-text-primary hover:theme-bg-tertiary transition-colors'
+                  >
+                    {t('cloudSyncNavBtn')}
+                  </button>
+                </PortalTooltip> */}
                 {/* 轻量级清理缓存按钮：小型、次要视觉权重 */}
-                <button
-                  type='button'
-                  onClick={handleClearCache}
-                  className='inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded-lg border theme-border theme-text-secondary hover:theme-text-primary hover:theme-bg-tertiary transition-colors'
-                  title={t('clearCache')}
+                <PortalTooltip
+                  content={t('clearCacheTooltip')}
+                  maxWidth={240}
+                  fitContent
                 >
-                  {t('clearCache')}
-                </button>
+                  <button
+                    type='button'
+                    onClick={handleClearCache}
+                    className='inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2 py-1 text-[10px] rounded-lg border theme-border theme-text-secondary hover:theme-text-primary hover:theme-bg-tertiary transition-colors'
+                  >
+                    {t('clearCache')}
+                  </button>
+                </PortalTooltip>
               </div>
             </div>
           </div>
         </>
       )}
+
+      {/* 同步配置弹框暂未开放
+      <CloudSettingsSyncModal
+        isOpen={showCloudSyncModal}
+        onClose={() => setShowCloudSyncModal(false)}
+      /> */}
     </div>
   );
 };

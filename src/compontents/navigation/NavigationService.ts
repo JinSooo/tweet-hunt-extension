@@ -12,6 +12,7 @@ export interface NavigationService {
     navigateCallback: (route: string, props?: Record<string, any>) => void,
   ) => void;
   unregisterPanel: (panelId: string) => void;
+  hasPanel: (panelId: string) => boolean;
   getPanelHistory: (panelId: string) => string[] | undefined;
   savePanelHistory: (panelId: string, history: string[]) => void;
   clearPanelHistory: (panelId: string) => void;
@@ -59,6 +60,10 @@ class NavigationServiceImpl implements NavigationService {
 
   unregisterPanel(panelId: string): void {
     delete this.panels[panelId];
+  }
+
+  hasPanel(panelId: string): boolean {
+    return Boolean(this.panels[panelId]);
   }
 
   getPanelHistory(panelId: string): string[] | undefined {

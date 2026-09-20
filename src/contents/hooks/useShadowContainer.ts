@@ -75,6 +75,7 @@ let activeInstanceId: string | null = null;
 // 全局事件处理函数
 const handleGlobalZIndexActivation = (instanceId: string) => {
   checkMainSectionAndFixZIndex();
+  const currentInstance = zIndexInstances.get(instanceId);
   // 如果点击的是当前激活的实例，不做处理
   if (activeInstanceId === instanceId) return;
 
@@ -91,7 +92,6 @@ const handleGlobalZIndexActivation = (instanceId: string) => {
   }
 
   // 设置新的激活实例
-  const currentInstance = zIndexInstances.get(instanceId);
   if (currentInstance) {
     currentInstance.element.style.zIndex = '999';
     activeInstanceId = instanceId;

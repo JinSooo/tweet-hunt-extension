@@ -81,7 +81,12 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
   });
   // const [theme] = useLocalStorage('@xhunt/theme', 'dark');
   const { isEnabled } = useCrossPageSettings();
+  const showHotTrendingEnabled = isEnabled('showHotTrendingWeb3');
   const showReplyAlpha = isEnabled('showReplyAlpha');
+  const showReplyAlphaCnWeb3 = isEnabled('showReplyAlphaCn_web3');
+  const showReplyAlphaGlobalWeb3 = isEnabled('showReplyAlphaGlobal_web3');
+  const showReplyAlphaWeb3 =
+    showReplyAlpha && (showReplyAlphaCnWeb3 || showReplyAlphaGlobalWeb3);
   const { hasAi } = useUserDomain();
   const [activeType, setActiveType] = useLocalStorage<ActiveType>(
     '@xhunt/hotProjectsActiveType',
@@ -100,6 +105,10 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
   const [activeDays, setActiveDays] = useState<1 | 7>(1);
   const [activeHours, setActiveHours] = useState<1 | 4 | 8 | 24>(24);
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
+  const regionDropdownRef = React.useRef<HTMLDivElement | null>(null);
+  const regionDropdownMenuRef = React.useRef<HTMLDivElement | null>(null);
+  const daysDropdownRef = React.useRef<HTMLDivElement | null>(null);
+  const daysDropdownMenuRef = React.useRef<HTMLDivElement | null>(null);
 
   // 当切换到 tweet tab 时，默认用 24h；切回其它 tab 保持日维度
   useEffect(() => {
@@ -115,7 +124,74 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
   // const [isTransitioning, setIsTransitioning] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
-  const currentRegion = region || (lang === 'zh' ? 'cn' : 'global');
+
+  useEffect(() => {
+    if (!showHotTrendingEnabled || isHidden) {
+      setShowRegionDropdown(false);
+      setShowDaysDropdown(false);
+      return;
+    }
+
+    if (activeType === 'token') {
+      setShowRegionDropdown(false);
+    }
+
+    if (activeType === 'reply') {
+      setShowDaysDropdown(false);
+    }
+  }, [activeType, isHidden, showHotTrendingEnabled]);
+
+  useEffect(() => {
+    if (!showRegionDropdown && !showDaysDropdown) return;
+
+    const isPointInside = (
+      event: PointerEvent,
+      refs: React.RefObject<HTMLDivElement>[],
+    ) => refs.some((ref) => {
+      const rect = ref.current?.getBoundingClientRect();
+      if (!rect) return false;
+
+      return (
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom
+      );
+    });
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        showRegionDropdown &&
+        !isPointInside(event, [regionDropdownRef, regionDropdownMenuRef])
+      ) {
+        setShowRegionDropdown(false);
+      }
+
+      if (
+        showDaysDropdown &&
+        !isPointInside(event, [daysDropdownRef, daysDropdownMenuRef])
+      ) {
+        setShowDaysDropdown(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+    };
+  }, [showRegionDropdown, showDaysDropdown]);
+
+  const selectedRegion = region || (lang === 'zh' ? 'cn' : 'global');
+  const replyAlphaFallbackRegion = showReplyAlphaCnWeb3 ? 'cn' : 'global';
+  const currentRegion =
+    activeType === 'reply' &&
+      showReplyAlphaWeb3 &&
+      !(
+        (selectedRegion === 'cn' && showReplyAlphaCnWeb3) ||
+        (selectedRegion === 'global' && showReplyAlphaGlobalWeb3)
+      )
+      ? replyAlphaFallbackRegion
+      : selectedRegion;
   const canShowInteractionKolTab = currentRegion === 'cn';
 
   useEffect(() => {
@@ -125,10 +201,10 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
   }, [activeKolTab, canShowInteractionKolTab]);
 
   useEffect(() => {
-    if (!showReplyAlpha && activeType === 'reply') {
+    if (!showReplyAlphaWeb3 && activeType === 'reply') {
       setActiveType('tweet');
     }
-  }, [activeType, setActiveType, showReplyAlpha]);
+  }, [activeType, setActiveType, showReplyAlphaWeb3]);
 
   // 关注数据请求（原项目数据）
   const {
@@ -241,7 +317,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     refreshDeps: [currentRegion, activeHours],
   });
 
-  // 抢评 Alpha 推文数据请求
+  // 飙升推文数据请求
   const {
     data: trendingTweetsData,
     loading: trendingTweetsLoading,
@@ -299,7 +375,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     }
 
     if (activeType === 'reply') {
-      if (showReplyAlpha) {
+      if (showReplyAlphaWeb3) {
         fetchTrendingTweetsData();
       }
       return;
@@ -319,7 +395,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     activeHours,
     activeMediaTab,
     currentRegion,
-    showReplyAlpha,
+    showReplyAlphaWeb3,
   ]);
 
   // 检查浏览器是否支持 View Transition API
@@ -331,7 +407,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     if (newType === activeType) return;
 
     const updateActiveType = () => {
-      if (newType === 'reply' && !showReplyAlpha) {
+      if (newType === 'reply' && !showReplyAlphaWeb3) {
         return;
       }
 
@@ -520,6 +596,26 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
     [hotTweetMediaData],
   );
 
+  const regionOptions = useMemo(() => {
+    const options = [
+      { key: 'cn' as const, label: t('cnRegion') },
+      { key: 'global' as const, label: t('enRegion') },
+    ];
+
+    if (activeType !== 'reply') {
+      return options;
+    }
+
+    return options.filter((opt) =>
+      opt.key === 'cn' ? showReplyAlphaCnWeb3 : showReplyAlphaGlobalWeb3,
+    );
+  }, [
+    activeType,
+    showReplyAlphaCnWeb3,
+    showReplyAlphaGlobalWeb3,
+    t,
+  ]);
+
   // Tab配置：展示文案、tooltip、loading、数据判断和内容渲染统一维护
   const tabConfigs = useMemo(
     () => [
@@ -595,7 +691,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
           </div>
         ),
       },
-      ...(showReplyAlpha
+      ...(showReplyAlphaWeb3
         ? [
           {
             id: 'reply' as const,
@@ -706,7 +802,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
       mediaItems,
       personLoading,
       setTweetTagFilter,
-      showReplyAlpha,
+      showReplyAlphaWeb3,
       t,
       tokenLoading,
       topInfluencerItems,
@@ -740,7 +836,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
   ];
 
   // 检查热门趋势是否启用
-  if (!isEnabled('showHotTrendingWeb3')) {
+  if (!showHotTrendingEnabled) {
     if (!hasAi) return <></>;
     return <HotTrendingEmptyState settingKey='showHotTrendingWeb3' />;
   }
@@ -774,8 +870,8 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
           {/* 右侧操作区：区域/日期下拉 + 关闭 */}
           <div className='flex items-center gap-1 shrink-0'>
             {/* 区域下拉选择（在日期选择左边一点） - 仅非token标签显示 */}
-            {activeType !== 'token' && (
-              <div className='relative'>
+            {activeType !== 'token' && regionOptions.length > 0 && (
+              <div ref={regionDropdownRef} className='relative'>
                 <button
                   className='h-7 flex items-center gap-1 px-2.5 text-[11px] font-semibold rounded-xl theme-text-primary theme-hover transition-all border theme-border whitespace-nowrap'
                   onClick={() => setShowRegionDropdown(!showRegionDropdown)}
@@ -791,15 +887,8 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
 
                 {showRegionDropdown && (
                   <>
-                    <div
-                      className='fixed inset-0 z-10'
-                      onClick={() => setShowRegionDropdown(false)}
-                    />
-                    <div className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[118px] backdrop-blur-md'>
-                      {[
-                        { key: 'cn' as const, label: t('cnRegion') },
-                        { key: 'global' as const, label: t('enRegion') },
-                      ].map((opt) => {
+                    <div ref={regionDropdownMenuRef} className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[118px] backdrop-blur-md'>
+                      {regionOptions.map((opt) => {
                         const selected = currentRegion === opt.key;
 
                         return (
@@ -833,7 +922,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
 
             {/* 日期下拉选择 */}
             {activeType !== 'reply' && (
-              <div className='relative'>
+              <div ref={daysDropdownRef} className='relative'>
                 <button
                   className='h-7 flex items-center gap-1 px-2.5 text-[11px] font-semibold rounded-xl theme-text-primary theme-hover transition-all border theme-border whitespace-nowrap'
                   onClick={() => setShowDaysDropdown(!showDaysDropdown)}
@@ -849,11 +938,7 @@ export function Web3HotProjectsKOLs({ className = '' }: Web3HotProjectsKOLsProps
 
                 {showDaysDropdown && (
                   <>
-                    <div
-                      className='fixed inset-0 z-10'
-                      onClick={() => setShowDaysDropdown(false)}
-                    />
-                    <div className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[86px] backdrop-blur-md'>
+                    <div ref={daysDropdownMenuRef} className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[86px] backdrop-blur-md'>
                       {timeOptions.map((days) => {
                         const selected = activeTimeValue === days;
                         const label = isTweetTab

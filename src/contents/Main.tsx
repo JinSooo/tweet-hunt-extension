@@ -9,6 +9,7 @@ import { NameRightData } from '~compontents/area/NameRightData.tsx';
 import { FollowedRightData } from '~compontents/area/FollowedRightData.tsx';
 import { SideBarIcon } from '~compontents/area/SideBarIcon.tsx';
 import useTwitterAuthCallback from '~contents/hooks/useTwitterAuthCallback.ts';
+import useReloadOnLogin from '~contents/hooks/useReloadOnLogin.ts';
 import { GlobalTips } from '~compontents/area/GlobalTips.tsx';
 import ErrorBoundary from '~compontents/ErrorBoundary.tsx';
 import { useVerifyLoginStatus } from '~contents/hooks/useVerifyLoginStatus.ts';
@@ -47,11 +48,13 @@ import { AiDetectTips } from '~compontents/AiDetectTips.tsx';
 import { KolAiChatButton } from '~compontents/area/KolAiChatButton.tsx';
 import { KolAiChatDialog } from '~compontents/KolAiChatDialog.tsx';
 import useUserDomain from './hooks/useUserDomain.ts';
+import { TweetCleaner } from './hooks/useTweetCleaner.ts';
 import UserDomainSetupModal from '~compontents/UserDomainSetupModal.tsx';
 import {
   useUserDomain as useUserDomainHook,
   type UserDomainPreference,
 } from './hooks/useUserDomain.ts';
+import { useCrossPageSettings } from '~utils/settingsManager.ts';
 
 export const config = {
   matches: ['https://x.com/*'],
@@ -79,6 +82,8 @@ const Main = () => {
     '@settings/language1',
     '',
   );
+  // 登录成功（token 在其他标签页写入）后原地刷新页面
+  useReloadOnLogin();
   // 初始化皮肤样式
   const { avatarRankMode, isLoading: isAvatarSkinLoading } =
     useAvatarSkinInitializer();
@@ -135,6 +140,8 @@ function MainContent({
   useVerifyLoginStatus();
   useTwitterAuthCallback();
   const { isSetupCompleted, isSetupLoading } = useUserDomainHook();
+  const { isEnabled } = useCrossPageSettings();
+  const showSidebarIcon = isEnabled('showSidebarIcon');
 
   return (
     <div
@@ -157,9 +164,11 @@ function MainContent({
         <UICheckSection />
       </ErrorBoundary>
 
-      <ErrorBoundary name='SideBarIcon'>
-        <SideBarIcon />
-      </ErrorBoundary>
+      {showSidebarIcon && (
+        <ErrorBoundary name='SideBarIcon'>
+          <SideBarIcon />
+        </ErrorBoundary>
+      )}
 
       <ErrorBoundary name='GlobalTips'>
         <GlobalTips />
@@ -196,6 +205,9 @@ function FeatureLayer() {
 
   return (
     <>
+      <ErrorBoundary name='TweetCleaner'>
+        <TweetCleaner />
+      </ErrorBoundary>
       <ErrorBoundary name='FixedTwitterPanel'>
         <FixedTwitterPanel
           twInfo={mainData.twInfo}

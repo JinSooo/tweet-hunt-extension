@@ -2,13 +2,15 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Info, X, Ghost, Loader2 } from 'lucide-react';
 import { useI18n } from '~contents/hooks/i18n.ts';
 import { useLocalStorage } from '~storage/useLocalStorage.ts';
-import { useRequest } from 'ahooks';
+import { useLockFn, useRequest } from 'ahooks';
 import {
   fetchFollowRelation,
   fetchHistoricalTweets,
   fetchFansRank,
   fetchUnfollowRelation,
+  getTwitterAuthUrl,
 } from '~contents/services/api.ts';
+import { openNewTab } from '~contents/utils';
 import { usePlacementTrackingContext } from '~contents/contexts/PlacementTrackingContext.tsx';
 import { Tabs } from '~/compontents/Tabs.tsx';
 import { FollowRelationPanel } from '~/compontents/FollowRelationPanel.tsx';
@@ -60,6 +62,13 @@ export function PersonalAnalysisPanel({
   const [isGhostPanelOpen, setIsGhostPanelOpen] = useState(false);
   const ghostButtonRef = useRef<HTMLButtonElement>(null);
   const contentScrollRef = useRef<HTMLDivElement>(null);
+
+  const redirectToLogin = useLockFn(async () => {
+    const ret = await getTwitterAuthUrl();
+    if (ret?.url) {
+      openNewTab(ret.url);
+    }
+  });
 
   // 判断是否在当前用户的个人页面
   const isOwnProfile = useMemo(() => {
@@ -425,6 +434,11 @@ export function PersonalAnalysisPanel({
                 ref={ghostButtonRef}
                 type='button'
                 onClick={() => {
+                  if (!userObj?.username) {
+                    redirectToLogin();
+                    return;
+                  }
+
                   const nextState = !isGhostPanelOpen;
                   setIsGhostPanelOpen(nextState);
                   window.dispatchEvent(

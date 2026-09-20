@@ -1,20 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDebounceFn } from 'ahooks';
 import { useGlobalResize } from '~contents/hooks/useGlobalResize';
 import { useGlobalScroll } from '~contents/hooks/useGlobalScroll';
 import { useLocalStorage } from '~storage/useLocalStorage.ts';
 import { sanitizeHtml } from '~utils/sanitizeHtml';
+import cssText from 'data-text:~/css/style.css';
 import { LoginRequired } from './LoginRequired';
 
 interface StatItemProps {
   label: string | React.ReactNode;
   value: string | number | React.ReactNode;
-  hoverContent: React.ReactNode;
+  hoverContent?: React.ReactNode;
   valueClassName?: string;
   valueStyle?: Record<string, string>;
   labelClassName?: string;
   className?: string;
   onHover?: () => Promise<void> | void;
+  preferredPlacement?: 'auto' | 'top' | 'bottom';
 }
 
 // Module-level counter for unique IDs
@@ -149,6 +152,7 @@ export function HoverStatItem({
   labelClassName = '',
   className = '',
   onHover,
+  preferredPlacement = 'auto',
 }: StatItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPanelMounted, setIsPanelMounted] = useState(false);
@@ -164,16 +168,25 @@ export function HoverStatItem({
   const hasCalledHover = useRef(false);
   const isLoadingRef = useRef(false);
   const isPointerInsideRef = useRef(false);
+  const suppressCloseUntilRef = useRef(0);
   const lastPointerPositionRef = useRef<{ x: number; y: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelContentRef = useRef<HTMLDivElement>(null);
+  const portalHostRef = useRef<HTMLDivElement | null>(null);
+  const portalRootRef = useRef<ShadowRoot | null>(null);
+  const hasHoverContent =
+    hoverContent !== null &&
+    hoverContent !== undefined &&
+    hoverContent !== false;
   const [panelPosition, setPanelPosition] = useState<{
     left: number;
+    top: number;
     placement: HoverPanelPlacement;
     maxHeight: number;
     maxWidth: number;
   }>({
     left: 0,
+    top: 0,
     placement: 'top',
     maxHeight: PANEL_MAX_HEIGHT,
     maxWidth: PANEL_MAX_WIDTH,
@@ -201,7 +214,68 @@ export function HoverStatItem({
     }
   };
 
+  const ensurePanelPortalRoot = () => {
+    if (portalRootRef.current && portalHostRef.current?.isConnected) {
+      return portalRootRef.current;
+    }
+
+    const host = document.createElement('div');
+    host.setAttribute('data-xhunt-hover-portal', 'true');
+    host.setAttribute('data-theme', theme);
+    host.style.cssText = [
+      'position: fixed',
+      'inset: 0',
+      'z-index: 2147483647',
+      'pointer-events: none',
+      'overflow: visible',
+    ].join(';');
+
+    const shadow = host.attachShadow({ mode: 'open' });
+    const styleEl = document.createElement('style');
+    styleEl.textContent = cssText;
+    shadow.appendChild(styleEl);
+    document.body.appendChild(host);
+
+    portalHostRef.current = host;
+    portalRootRef.current = shadow;
+    return shadow;
+  };
+
+  const cleanupPanelPortalRoot = () => {
+    portalHostRef.current?.remove();
+    portalHostRef.current = null;
+    portalRootRef.current = null;
+  };
+
+  const keepPanelOpenTemporarily = () => {
+    suppressCloseUntilRef.current = Date.now() + 500;
+    isPointerInsideRef.current = true;
+    clearHideTimer();
+  };
+
+  useEffect(() => {
+    if (hasHoverContent || !isPanelMounted) return;
+
+    activeInstances.delete(idRef.current);
+    activeTopOpacityInstances.delete(idRef.current);
+    updateZIndexes();
+    clearShowTimer();
+    clearHideTimer();
+    clearPanelUnmountTimer();
+    clearPanelOpenFrame();
+    isOpeningPanelRef.current = false;
+    hasAutoScrolledDownRef.current = false;
+    setIsHovered(false);
+    setIsPanelMounted(false);
+    cleanupPanelPortalRoot();
+  }, [hasHoverContent, isPanelMounted]);
+
+  useEffect(() => {
+    portalHostRef.current?.setAttribute('data-theme', theme);
+  }, [theme]);
+
   const openHoverPanel = () => {
+    ensurePanelPortalRoot();
     clearPanelUnmountTimer();
     clearPanelOpenFrame();
     isOpeningPanelRef.current = true;
@@ -218,6 +292,7 @@ export function HoverStatItem({
     panelUnmountTimer.current = setTimeout(() => {
       panelUnmountTimer.current = undefined;
       setIsPanelMounted(false);
+      cleanupPanelPortalRoot();
     }, PANEL_FADE_DURATION_MS);
   };
 
@@ -231,23 +306,49 @@ export function HoverStatItem({
     };
   };
 
+  const isPointInsideElement = (
+    element: HTMLElement | null,
+    point: { x: number; y: number },
+  ) => {
+    if (!element) return false;
+    const rect = element.getBoundingClientRect();
+    return (
+      point.x >= rect.left &&
+      point.x <= rect.right &&
+      point.y >= rect.top &&
+      point.y <= rect.bottom
+    );
+  };
+
   const isPointerActuallyInside = () => {
     const container = containerRef.current;
+    const panel = panelRef.current;
     if (!container) return false;
 
-    if (container.matches(':hover')) {
+    if (container.matches(':hover') || panel?.matches(':hover')) {
       return true;
     }
 
     const pointerPosition = lastPointerPositionRef.current;
     if (!pointerPosition) return false;
 
+    if (
+      isPointInsideElement(container, pointerPosition) ||
+      isPointInsideElement(panel, pointerPosition)
+    ) {
+      return true;
+    }
+
     const elementUnderPointer = document.elementFromPoint(
       pointerPosition.x,
       pointerPosition.y,
     );
 
-    return !!(elementUnderPointer && container.contains(elementUnderPointer));
+    return !!(
+      elementUnderPointer &&
+      (container.contains(elementUnderPointer) ||
+        panel?.contains(elementUnderPointer))
+    );
   };
 
   const updatePanelPosition = useCallback(() => {
@@ -290,14 +391,29 @@ export function HoverStatItem({
       triggerRect.top - panelHeight - panelGap;
     const isTopPlacementTooCloseToViewportTop =
       estimatedTopPlacementPanelTop < TOP_PLACEMENT_MIN_TOP;
-    const placement: HoverPanelPlacement =
+    const preferredPanelHeight = Math.min(panelHeight, PANEL_MAX_HEIGHT);
+    const autoPlacement: HoverPanelPlacement =
       !isTopPlacementTooCloseToViewportTop &&
-        (availableTop >= Math.min(panelHeight, PANEL_MAX_HEIGHT) ||
-          availableTop >= availableBottom)
+        (availableTop >= preferredPanelHeight || availableTop >= availableBottom)
         ? 'top'
         : 'bottom';
+    const canUsePreferredTop =
+      preferredPlacement === 'top' &&
+      !isTopPlacementTooCloseToViewportTop &&
+      availableTop >= preferredPanelHeight;
+    const canUsePreferredBottom =
+      preferredPlacement === 'bottom' && availableBottom >= preferredPanelHeight;
+    const placement: HoverPanelPlacement = canUsePreferredTop
+      ? 'top'
+      : canUsePreferredBottom
+        ? 'bottom'
+        : autoPlacement;
 
-    if (placement === 'bottom' && !hasAutoScrolledDownRef.current) {
+    if (
+      preferredPlacement === 'auto' &&
+      placement === 'bottom' &&
+      !hasAutoScrolledDownRef.current
+    ) {
       const scrollingElement =
         document.scrollingElement || document.documentElement || document.body;
       const currentScrollTop =
@@ -338,12 +454,25 @@ export function HoverStatItem({
     const devicePixelRatio = window.devicePixelRatio || 1;
     const snappedTargetLeft =
       Math.round(targetLeft * devicePixelRatio) / devicePixelRatio;
-    const left = snappedTargetLeft - triggerRect.left;
+    const left = snappedTargetLeft;
+    const targetTop =
+      placement === 'top'
+        ? triggerRect.top - panelHeight - panelGap
+        : triggerRect.bottom + panelGap;
+    const minTop = VIEWPORT_EDGE_GAP;
+    const maxTop = Math.max(
+      VIEWPORT_EDGE_GAP,
+      viewportHeight - VIEWPORT_EDGE_GAP - Math.min(panelHeight, maxHeight),
+    );
+    const top =
+      Math.round(Math.min(Math.max(targetTop, minTop), maxTop) *
+        devicePixelRatio) / devicePixelRatio;
 
     setPanelPosition((prev) => {
-      const next = { left, placement, maxHeight, maxWidth };
+      const next = { left, top, placement, maxHeight, maxWidth };
       if (
         Math.abs(prev.left - next.left) < 0.5 &&
+        Math.abs(prev.top - next.top) < 0.5 &&
         prev.placement === next.placement &&
         Math.abs(prev.maxHeight - next.maxHeight) < 0.5 &&
         Math.abs(prev.maxWidth - next.maxWidth) < 0.5
@@ -352,18 +481,30 @@ export function HoverStatItem({
       }
       return next;
     });
-  }, []);
+  }, [preferredPlacement]);
 
   const scheduleClose = () => {
     clearHideTimer();
-    hoverTimer.current = setTimeout(() => {
+    const closeIfNeeded = () => {
       hoverTimer.current = undefined;
+      const remainingSuppressTime = suppressCloseUntilRef.current - Date.now();
+
+      if (remainingSuppressTime > 0) {
+        hoverTimer.current = setTimeout(
+          closeIfNeeded,
+          remainingSuppressTime + HIDE_DELAY_MS,
+        );
+        return;
+      }
+
       if (isPointerActuallyInside()) {
         isPointerInsideRef.current = true;
         return;
       }
       closeHoverPanel();
-    }, HIDE_DELAY_MS);
+    };
+
+    hoverTimer.current = setTimeout(closeIfNeeded, HIDE_DELAY_MS);
   };
 
   const { run: debouncedHover } = useDebounceFn(
@@ -439,6 +580,7 @@ export function HoverStatItem({
       hasAutoScrolledDownRef.current = false;
       clearPanelUnmountTimer();
       clearPanelOpenFrame();
+      cleanupPanelPortalRoot();
     };
   }, []);
 
@@ -485,9 +627,14 @@ export function HoverStatItem({
       updatePointerPosition(event);
 
       const container = containerRef.current;
+      const panel = panelRef.current;
       if (!container) return;
 
-      if (container.contains(event.target as Node)) {
+      if (
+        container.contains(event.target as Node) ||
+        panel?.contains(event.target as Node) ||
+        isPointerActuallyInside()
+      ) {
         clearHideTimer();
         return;
       }
@@ -503,6 +650,8 @@ export function HoverStatItem({
   }, [isHovered]);
 
   const handleMouseEnter = (event?: React.MouseEvent) => {
+    if (!hasHoverContent) return;
+
     if (event) {
       updatePointerPosition(event);
     }
@@ -536,7 +685,11 @@ export function HoverStatItem({
     }
 
     const container = containerRef.current;
-    if (relatedTarget instanceof Node && container?.contains(relatedTarget)) {
+    const panel = panelRef.current;
+    if (
+      relatedTarget instanceof Node &&
+      (container?.contains(relatedTarget) || panel?.contains(relatedTarget))
+    ) {
       return;
     }
 
@@ -544,6 +697,49 @@ export function HoverStatItem({
     clearShowTimer();
     scheduleClose();
   };
+
+  const hoverPanel =
+    hasHoverContent && isPanelMounted && portalRootRef.current
+      ? createPortal(
+        <div
+          ref={panelRef}
+          data-theme={theme}
+          className={`fixed w-max max-w-[400px] ${isHovered ? 'pointer-events-auto' : 'pointer-events-none'}`}
+          style={{
+            left: panelPosition.left,
+            top: panelPosition.top,
+            maxWidth: panelPosition.maxWidth,
+            zIndex: 2147483647,
+          }}
+          onMouseEnter={(event) => {
+            updatePointerPosition(event);
+            isPointerInsideRef.current = true;
+            clearHideTimer();
+          }}
+          onMouseMove={updatePointerPosition}
+          onMouseLeave={(event) => handleMouseLeave(event.relatedTarget, event)}
+          onPointerDown={(event) => {
+            updatePointerPosition(event);
+            keepPanelOpenTemporarily();
+          }}
+        >
+          <div
+            ref={panelContentRef}
+            className={`z-10 theme-bg-secondary theme-text-primary rounded-lg shadow-lg theme-border border p-1 overflow-auto custom-scrollbar transition-opacity duration-150 ease-out ${isHovered
+              ? 'opacity-100'
+              : 'opacity-0 pointer-events-none'
+              }`}
+            style={{
+              maxHeight: panelPosition.maxHeight,
+              maxWidth: panelPosition.maxWidth,
+            }}
+          >
+            <LoginRequired>{hoverContent}</LoginRequired>
+          </div>
+        </div>,
+        portalRootRef.current,
+      )
+      : null;
 
   return (
     <div
@@ -555,10 +751,11 @@ export function HoverStatItem({
         width: 'max-content',
       }}
       onMouseEnter={handleMouseEnter}
+      onPointerDown={keepPanelOpenTemporarily}
       onMouseMove={(event) => {
         updatePointerPosition(event);
         requestIdleCallback(() => {
-          if (isHovered) return;
+          if (!hasHoverContent || isHovered) return;
           if (!containerRef.current?.matches(':hover')) return;
           handleMouseEnter();
         });
@@ -566,9 +763,12 @@ export function HoverStatItem({
       onMouseLeave={(event) => handleMouseLeave(event.relatedTarget, event)}
     >
       <div
-        className='flex items-center gap-1 cursor-pointer rounded px-1 -mx-1 theme-hover transition-colors'
+        className={`flex items-center gap-1 rounded px-1 -mx-1 transition-colors ${
+          hasHoverContent ? 'cursor-pointer theme-hover' : ''
+        }`}
         style={{
-          backgroundColor: isPanelMounted ? 'var(--hover-bg)' : undefined,
+          backgroundColor:
+            isPanelMounted && hasHoverContent ? 'var(--hover-bg)' : undefined,
         }}
       >
         {typeof label === 'string' ? (
@@ -594,46 +794,7 @@ export function HoverStatItem({
         )}
       </div>
 
-      {isPanelMounted && (
-        <div
-          ref={panelRef}
-          data-theme={theme}
-          className={`absolute w-max max-w-[400px] z-50 ${isHovered ? 'pointer-events-auto' : 'pointer-events-none'
-            } ${panelPosition.placement === 'top' ? 'bottom-full' : 'top-full'}`}
-          style={{
-            left: panelPosition.left,
-            maxWidth: panelPosition.maxWidth,
-          }}
-          onMouseEnter={(event) => {
-            updatePointerPosition(event);
-            isPointerInsideRef.current = true;
-            clearHideTimer();
-          }}
-          onMouseMove={updatePointerPosition}
-          onMouseLeave={(event) => handleMouseLeave(event.relatedTarget, event)}
-          onPointerDown={(event) => {
-            updatePointerPosition(event);
-            isPointerInsideRef.current = true;
-            clearHideTimer();
-          }}
-        >
-          <div
-            ref={panelContentRef}
-            className={`z-10 theme-bg-secondary theme-text-primary rounded-lg shadow-lg theme-border border p-1 overflow-auto custom-scrollbar transition-opacity duration-150 ease-out ${isHovered
-              ? 'opacity-100'
-              : 'opacity-0 pointer-events-none'
-              }`}
-            style={{
-              marginTop: panelPosition.placement === 'bottom' ? 8 : undefined,
-              marginBottom: panelPosition.placement === 'top' ? 8 : undefined,
-              maxHeight: panelPosition.maxHeight,
-              maxWidth: panelPosition.maxWidth,
-            }}
-          >
-            <LoginRequired>{hoverContent}</LoginRequired>
-          </div>
-        </div>
-      )}
+      {hoverPanel}
     </div>
   );
 }

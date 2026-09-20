@@ -2,13 +2,15 @@ import { useEffect } from 'react';
 import avatarRankCss from 'data-text:~/css/avatar-rank.css';
 import tokenHighlightCss from 'data-text:~/css/token-highlight.css';
 import floatingContainerCss from 'data-text:~/css/floating-container.css';
+import cleanerCss from 'data-text:~/css/cleaner.css';
 
 export function GlobalInjector() {
   useEffect(() => {
     // Create style element for global styles
     const style = document.createElement('style');
     style.setAttribute('id', 'xhunt-global-styles');
-    style.textContent = avatarRankCss + tokenHighlightCss + floatingContainerCss;
+    style.textContent =
+      avatarRankCss + tokenHighlightCss + floatingContainerCss + cleanerCss;
     document.head.appendChild(style);
 
     // Cleanup function

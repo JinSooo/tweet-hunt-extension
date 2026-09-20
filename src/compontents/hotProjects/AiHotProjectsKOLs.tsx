@@ -7,6 +7,7 @@ import {
   Flame,
   Github,
   Images,
+  MessageSquare,
   Users,
   X,
 } from 'lucide-react';
@@ -19,6 +20,7 @@ import {
   getAiTweetModel,
   getGithubTrending,
   getAiHotTweetMedia,
+  getAiTrendingTweets,
 } from '~contents/services/api.ts';
 import { TrendingListVisualization } from '../HotProjectsKOLs/TrendingListVisualization';
 import { HotItem } from '../HotProjectsKOLs/types';
@@ -34,6 +36,7 @@ import { TweetTagFilter } from '../HotProjectsKOLs/TweetTagFilter';
 import { ModelTreemapVisualization } from '../HotProjectsKOLs/ModelTreemapVisualization';
 import { HotTweetMediaList } from '../HotProjectsKOLs/HotTweetMediaList';
 import { SecondaryTabs } from '../SecondaryTabs';
+import { ReplyAlphaTweetList } from '../HotProjectsKOLs/ReplyAlphaTweetList';
 
 export interface AiHotProjectsKOLsProps {
   className?: string;
@@ -43,10 +46,16 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
   const contentScrollRef = React.useRef<HTMLDivElement | null>(null);
   const { t, lang } = useI18n();
   const { isEnabled } = useCrossPageSettings();
+  const showHotTrendingEnabled = isEnabled('showHotTrendingAi');
+  const showReplyAlpha = isEnabled('showReplyAlpha');
+  const showReplyAlphaCnAi = isEnabled('showReplyAlphaCn_ai');
+  const showReplyAlphaGlobalAi = isEnabled('showReplyAlphaGlobal_ai');
+  const showReplyAlphaAi =
+    showReplyAlpha && (showReplyAlphaCnAi || showReplyAlphaGlobalAi);
   const { hasWeb3 } = useUserDomain();
 
   const [activeType, setActiveType] = useLocalStorage<
-    'person' | 'tweet' | 'media' | 'model' | 'github'
+    'person' | 'tweet' | 'reply' | 'media' | 'model' | 'github'
   >('@xhunt/aiHotProjectsActiveType', 'person');
   const [activeDays, setActiveDays] = useState<1 | 7>(1);
   const [activeMediaTab, setActiveMediaTab] = useState<'video' | 'photo'>(
@@ -58,6 +67,16 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const [showRegionDropdown, setShowRegionDropdown] = useState(false);
   const [showModelViewDropdown, setShowModelViewDropdown] = useState(false);
+  const regionDropdownRef = React.useRef<HTMLDivElement | null>(null);
+  const regionDropdownMenuRef = React.useRef<HTMLDivElement | null>(null);
+  const modelViewDropdownRef = React.useRef<HTMLDivElement | null>(null);
+  const modelViewDropdownMenuRef = React.useRef<HTMLDivElement | null>(null);
+  const githubTimeDropdownRef = React.useRef<HTMLDivElement | null>(null);
+  const githubTimeDropdownMenuRef = React.useRef<HTMLDivElement | null>(null);
+  const githubLangDropdownRef = React.useRef<HTMLDivElement | null>(null);
+  const githubLangDropdownMenuRef = React.useRef<HTMLDivElement | null>(null);
+  const daysDropdownRef = React.useRef<HTMLDivElement | null>(null);
+  const daysDropdownMenuRef = React.useRef<HTMLDivElement | null>(null);
   const [modelViewMode, setModelViewMode] = useLocalStorage<'family' | 'variant'>(
     '@xhunt/modelTreemapViewMode',
     'variant'
@@ -80,7 +99,120 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
   const [showGithubTimeDropdown, setShowGithubTimeDropdown] = useState(false);
   const [showGithubLangDropdown, setShowGithubLangDropdown] = useState(false);
 
-  const currentRegion = region || (lang === 'zh' ? 'cn' : 'global');
+  useEffect(() => {
+    if (!showHotTrendingEnabled || isHidden) {
+      setShowRegionDropdown(false);
+      setShowModelViewDropdown(false);
+      setShowGithubTimeDropdown(false);
+      setShowGithubLangDropdown(false);
+      setShowDaysDropdown(false);
+      return;
+    }
+
+    if (activeType === 'model' || activeType === 'github') {
+      setShowRegionDropdown(false);
+    }
+
+    if (activeType !== 'model') {
+      setShowModelViewDropdown(false);
+    }
+
+    if (activeType !== 'github') {
+      setShowGithubTimeDropdown(false);
+      setShowGithubLangDropdown(false);
+    }
+
+    if (activeType === 'github' || activeType === 'reply') {
+      setShowDaysDropdown(false);
+    }
+  }, [activeType, isHidden, showHotTrendingEnabled]);
+
+  useEffect(() => {
+    if (
+      !showRegionDropdown &&
+      !showModelViewDropdown &&
+      !showGithubTimeDropdown &&
+      !showGithubLangDropdown &&
+      !showDaysDropdown
+    ) {
+      return;
+    }
+
+    const isPointInside = (
+      event: PointerEvent,
+      refs: React.RefObject<HTMLDivElement>[],
+    ) => refs.some((ref) => {
+      const rect = ref.current?.getBoundingClientRect();
+      if (!rect) return false;
+
+      return (
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom
+      );
+    });
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        showRegionDropdown &&
+        !isPointInside(event, [regionDropdownRef, regionDropdownMenuRef])
+      ) {
+        setShowRegionDropdown(false);
+      }
+
+      if (
+        showModelViewDropdown &&
+        !isPointInside(event, [modelViewDropdownRef, modelViewDropdownMenuRef])
+      ) {
+        setShowModelViewDropdown(false);
+      }
+
+      if (
+        showGithubTimeDropdown &&
+        !isPointInside(event, [githubTimeDropdownRef, githubTimeDropdownMenuRef])
+      ) {
+        setShowGithubTimeDropdown(false);
+      }
+
+      if (
+        showGithubLangDropdown &&
+        !isPointInside(event, [githubLangDropdownRef, githubLangDropdownMenuRef])
+      ) {
+        setShowGithubLangDropdown(false);
+      }
+
+      if (
+        showDaysDropdown &&
+        !isPointInside(event, [daysDropdownRef, daysDropdownMenuRef])
+      ) {
+        setShowDaysDropdown(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+    };
+  }, [
+    showRegionDropdown,
+    showModelViewDropdown,
+    showGithubTimeDropdown,
+    showGithubLangDropdown,
+    showDaysDropdown,
+  ]);
+
+  const selectedRegion = region || (lang === 'zh' ? 'cn' : 'global');
+  const replyAlphaFallbackRegion = showReplyAlphaCnAi ? 'cn' : 'global';
+  const currentRegion =
+    activeType === 'reply' &&
+      showReplyAlphaAi &&
+      !(
+        (selectedRegion === 'cn' && showReplyAlphaCnAi) ||
+        (selectedRegion === 'global' && showReplyAlphaGlobalAi)
+      )
+      ? replyAlphaFallbackRegion
+      : selectedRegion;
 
   const [tweetTagFilter, setTweetTagFilter] = useSessionStorage<{
     type: 'domain' | 'hot' | null;
@@ -100,8 +232,16 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
       setActiveHours(24);
     } else if (activeType === 'model') {
       setActiveHours(8);
+    } else if (activeType === 'reply') {
+      setShowDaysDropdown(false);
     }
   }, [activeType]);
+
+  useEffect(() => {
+    if (!showReplyAlphaAi && activeType === 'reply') {
+      setActiveType('tweet');
+    }
+  }, [activeType, setActiveType, showReplyAlphaAi]);
 
   // GitHub trending 数据请求
   const {
@@ -164,6 +304,20 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
     }
   );
 
+  // AI 飙升推文数据请求
+  const {
+    data: aiTrendingTweetsData,
+    loading: aiTrendingTweetsLoading,
+    run: fetchAiTrendingTweetsData,
+  } = useRequest(
+    () => getAiTrendingTweets(currentRegion),
+    {
+      manual: true,
+      debounceWait: 300,
+      refreshDeps: [currentRegion],
+    }
+  );
+
   // 热门图片/视频数据请求
   const {
     data: aiHotTweetMediaData,
@@ -184,6 +338,10 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
       fetchAiTopInfluencerData();
     } else if (activeType === 'tweet') {
       fetchAiHotTweetData();
+    } else if (activeType === 'reply') {
+      if (showReplyAlphaAi) {
+        fetchAiTrendingTweetsData();
+      }
     } else if (activeType === 'media') {
       fetchAiHotTweetMediaData();
     } else if (activeType === 'model') {
@@ -199,6 +357,7 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
     currentRegion,
     githubTimeWindow,
     githubSpokenLanguage,
+    showReplyAlphaAi,
   ]);
 
   const dayOptions = [1, 7] as const;
@@ -239,24 +398,54 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
     [aiHotTweetMediaData],
   );
 
+  const replyAlphaItems = useMemo(
+    () => aiTrendingTweetsData?.data?.data?.items || [],
+    [aiTrendingTweetsData],
+  );
+
+  const regionOptions = useMemo(() => {
+    const options = [
+      { key: 'cn' as const, label: t('cnRegion') },
+      { key: 'global' as const, label: t('enRegion') },
+    ];
+
+    if (activeType !== 'reply') {
+      return options;
+    }
+
+    return options.filter((opt) =>
+      opt.key === 'cn' ? showReplyAlphaCnAi : showReplyAlphaGlobalAi,
+    );
+  }, [
+    activeType,
+    showReplyAlphaCnAi,
+    showReplyAlphaGlobalAi,
+    t,
+  ]);
+
   const currentLoading = activeType === 'person'
     ? aiTopInfluencerLoading
     : activeType === 'tweet'
       ? aiHotTweetLoading
-      : activeType === 'media'
-        ? aiHotTweetMediaLoading
-        : activeType === 'model'
-          ? aiTweetModelLoading
-          : activeType === 'github'
-            ? githubTrendingLoading
-            : false;
+      : activeType === 'reply'
+        ? aiTrendingTweetsLoading
+        : activeType === 'media'
+          ? aiHotTweetMediaLoading
+          : activeType === 'model'
+            ? aiTweetModelLoading
+            : activeType === 'github'
+              ? githubTrendingLoading
+              : false;
 
   const tabs = [
     { id: 'person', label: t('kols'), icon: Users },
     { id: 'tweet', label: t('tweets'), icon: FileText },
+    ...(showReplyAlphaAi
+      ? [{ id: 'reply', label: t('replyAlpha'), icon: MessageSquare, isNew: true, tooltip: t('replyAlphaDescription') }]
+      : []),
     { id: 'model', label: t('modelRank'), icon: Brain },
-    { id: 'github', label: t('githubTrending'), icon: Github, isNew: true },
-    { id: 'media', label: t('hotTweetMedia'), icon: Images, isNew: true },
+    { id: 'github', label: t('githubTrending'), icon: Github },
+    { id: 'media', label: t('hotTweetMedia'), icon: Images },
   ];
 
   const topInfluencerItems: HotItem[] = useMemo(() => {
@@ -271,18 +460,20 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
     ? topInfluencerItems.length > 0
     : activeType === 'tweet'
       ? Boolean(aiHotTweetData?.data?.data?.length)
-      : activeType === 'media'
-        ? mediaItems.length > 0
-        : activeType === 'github'
-          ? githubRepos.length > 0
-          : Boolean(modelFamilyItems.length);
+      : activeType === 'reply'
+        ? replyAlphaItems.length > 0
+        : activeType === 'media'
+          ? mediaItems.length > 0
+          : activeType === 'github'
+            ? githubRepos.length > 0
+            : Boolean(modelFamilyItems.length);
 
   const mediaTabs = [
     { id: 'video', label: t('video') },
     { id: 'photo', label: t('photo') },
   ];
 
-  if (!isEnabled('showHotTrendingAi')) {
+  if (!showHotTrendingEnabled) {
     if (!hasWeb3) return <></>;
     return <HotTrendingEmptyState settingKey='showHotTrendingAi' />;
   }
@@ -314,8 +505,8 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
 
           <div className='flex items-center gap-1 shrink-0'>
             {/* 区域下拉选择（model / github tab 不显示） */}
-            {activeType !== 'model' && activeType !== 'github' && (
-              <div className='relative'>
+            {activeType !== 'model' && activeType !== 'github' && regionOptions.length > 0 && (
+              <div ref={regionDropdownRef} className='relative'>
                 <button
                   className='h-7 flex items-center gap-1 px-2.5 text-[11px] font-semibold rounded-xl theme-text-primary theme-hover transition-all border theme-border whitespace-nowrap'
                   onClick={() => setShowRegionDropdown(!showRegionDropdown)}
@@ -331,15 +522,8 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
 
                 {showRegionDropdown && (
                   <>
-                    <div
-                      className='fixed inset-0 z-10'
-                      onClick={() => setShowRegionDropdown(false)}
-                    />
-                    <div className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[118px] backdrop-blur-md'>
-                      {[
-                        { key: 'cn' as const, label: t('cnRegion') },
-                        { key: 'global' as const, label: t('enRegion') },
-                      ].map((opt) => {
+                    <div ref={regionDropdownMenuRef} className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[118px] backdrop-blur-md'>
+                      {regionOptions.map((opt) => {
                         const selected = currentRegion === opt.key;
 
                         return (
@@ -373,7 +557,7 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
 
             {/* model 视图切换（仅 model tab） */}
             {activeType === 'model' && (
-              <div className='relative'>
+              <div ref={modelViewDropdownRef} className='relative'>
                 <button
                   className='h-7 flex items-center gap-1 px-2.5 text-[11px] font-semibold rounded-xl theme-text-primary theme-hover transition-all border theme-border whitespace-nowrap'
                   onClick={() => setShowModelViewDropdown(!showModelViewDropdown)}
@@ -391,11 +575,7 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
 
                 {showModelViewDropdown && (
                   <>
-                    <div
-                      className='fixed inset-0 z-10'
-                      onClick={() => setShowModelViewDropdown(false)}
-                    />
-                    <div className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[118px] backdrop-blur-md'>
+                    <div ref={modelViewDropdownMenuRef} className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[118px] backdrop-blur-md'>
                       {[
                         { key: 'family' as const, label: lang === 'zh' ? '按家族' : 'By Family' },
                         { key: 'variant' as const, label: lang === 'zh' ? '按型号' : 'By Variant' },
@@ -427,7 +607,7 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
 
             {/* GitHub 时间窗口选择 */}
             {activeType === 'github' && (
-              <div className='relative'>
+              <div ref={githubTimeDropdownRef} className='relative'>
                 <button
                   className='h-7 flex items-center gap-1 px-2.5 text-[11px] font-semibold rounded-xl theme-text-primary theme-hover transition-all border theme-border whitespace-nowrap'
                   onClick={() => setShowGithubTimeDropdown(!showGithubTimeDropdown)}
@@ -443,11 +623,7 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
 
                 {showGithubTimeDropdown && (
                   <>
-                    <div
-                      className='fixed inset-0 z-10'
-                      onClick={() => setShowGithubTimeDropdown(false)}
-                    />
-                    <div className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[86px] backdrop-blur-md'>
+                    <div ref={githubTimeDropdownMenuRef} className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[86px] backdrop-blur-md'>
                       {[
                         { key: 'daily' as const, label: '1d' },
                         { key: 'weekly' as const, label: '7d' },
@@ -480,7 +656,7 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
 
             {/* GitHub 语言选择 */}
             {activeType === 'github' && (
-              <div className='relative'>
+              <div ref={githubLangDropdownRef} className='relative'>
                 <button
                   className='h-7 flex items-center gap-1 px-2.5 text-[11px] font-semibold rounded-xl theme-text-primary theme-hover transition-all border theme-border whitespace-nowrap'
                   onClick={() => setShowGithubLangDropdown(!showGithubLangDropdown)}
@@ -496,11 +672,7 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
 
                 {showGithubLangDropdown && (
                   <>
-                    <div
-                      className='fixed inset-0 z-10'
-                      onClick={() => setShowGithubLangDropdown(false)}
-                    />
-                    <div className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[104px] backdrop-blur-md'>
+                    <div ref={githubLangDropdownMenuRef} className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[104px] backdrop-blur-md'>
                       {[
                         { key: 'all' as const, label: t('githubLang_all') },
                         { key: 'zh' as const, label: t('githubLang_zh') },
@@ -532,8 +704,8 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
             )}
 
             {/* 日期/时间下拉选择（非 github tab） */}
-            {activeType !== 'github' && (
-              <div className='relative'>
+            {activeType !== 'github' && activeType !== 'reply' && (
+              <div ref={daysDropdownRef} className='relative'>
                 <button
                   className='h-7 flex items-center gap-1 px-2.5 text-[11px] font-semibold rounded-xl theme-text-primary theme-hover transition-all border theme-border whitespace-nowrap'
                   onClick={() => setShowDaysDropdown(!showDaysDropdown)}
@@ -549,11 +721,7 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
 
                 {showDaysDropdown && (
                   <>
-                    <div
-                      className='fixed inset-0 z-10'
-                      onClick={() => setShowDaysDropdown(false)}
-                    />
-                    <div className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[86px] backdrop-blur-md'>
+                    <div ref={daysDropdownMenuRef} className='absolute right-0 top-full mt-2 p-1.5 theme-bg-secondary rounded-2xl shadow-xl theme-border border z-20 min-w-[86px] backdrop-blur-md'>
                       {timeOptions.map((val) => {
                         const selected = activeTimeValue === val;
                         const label = isTimeTab
@@ -656,6 +824,13 @@ export function AiHotProjectsKOLs({ className = '' }: AiHotProjectsKOLsProps) {
                   <TweetList
                     items={aiHotTweetData?.data?.data || []}
                     filter={tweetTagFilter}
+                    lang={lang === 'zh' ? 'zh' : 'en'}
+                  />
+                </div>
+              ) : activeType === 'reply' ? (
+                <div className='min-h-[360px] mt-1'>
+                  <ReplyAlphaTweetList
+                    items={replyAlphaItems}
                     lang={lang === 'zh' ? 'zh' : 'en'}
                   />
                 </div>

@@ -34,6 +34,7 @@ const ALLOWED_REQUEST_METHODS = new Set([
   'PATCH',
   'DELETE',
 ]);
+const X_TAB_URL_PATTERNS = ['https://x.com/*'];
 
 const TAB_EDIT_LOCK_RETRY_DELAYS = [150, 350, 700];
 
@@ -123,6 +124,57 @@ async function createTabSafely(createProperties: any) {
     }
   }
   return undefined;
+}
+
+async function queryTabsSafely(queryInfo: any): Promise<any[]> {
+  return new Promise((resolve) => {
+    try {
+      (chrome as any).tabs?.query(queryInfo, (tabs: any[]) => {
+        const lastError = (chrome as any).runtime?.lastError;
+        if (lastError) {
+          console.log('[App] Failed to query x.com tabs:', lastError.message);
+          resolve([]);
+          return;
+        }
+
+        resolve(Array.isArray(tabs) ? tabs : []);
+      });
+    } catch (error) {
+      console.log('[App] Failed to query x.com tabs:', error);
+      resolve([]);
+    }
+  });
+}
+
+async function reloadTabSafely(tabId: number): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      (chrome as any).tabs?.reload(tabId, () => {
+        const lastError = (chrome as any).runtime?.lastError;
+        if (lastError) {
+          console.log('[App] Failed to reload x.com tab:', lastError.message);
+        }
+        resolve();
+      });
+    } catch (error) {
+      console.log('[App] Failed to reload x.com tab:', error);
+      resolve();
+    }
+  });
+}
+
+async function reloadXTabs(reason: string): Promise<void> {
+  const tabs = await queryTabsSafely({ url: X_TAB_URL_PATTERNS });
+  await Promise.all(
+    tabs
+      .map((tab) => tab?.id)
+      .filter((tabId) => typeof tabId === 'number')
+      .map((tabId) => reloadTabSafely(tabId)),
+  );
+
+  if (tabs.length > 0) {
+    console.log(`[App] Reloaded ${tabs.length} x.com tabs:`, reason);
+  }
 }
 
 /**
@@ -304,6 +356,9 @@ async function handleInstallOrUpdate(details: any) {
 // 应用安装/更新
 (chrome as any).runtime?.onInstalled?.addListener((details: any) => {
   console.log('[App] Extension installed/updated, reason:', details?.reason);
+  if (details?.reason === 'update') {
+    void reloadXTabs('extension updated');
+  }
   // 暂存 details，等 prewarmConfig 完成后再执行
   pendingInstallDetails = details;
   prewarmConfigDebounced();

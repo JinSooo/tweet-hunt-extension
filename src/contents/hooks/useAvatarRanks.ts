@@ -212,6 +212,14 @@ function clearAvatarElementCache(el: HTMLElement) {
   avatarDomMetaCache.delete(el);
 }
 
+function syncAvatarRankBadgePosition(shouldPlaceTop: boolean) {
+  document
+    .querySelectorAll<HTMLElement>('.xhunt-avatar-rank-badge')
+    .forEach((badge) => {
+      badge.classList.toggle('xhunt-badge-top', shouldPlaceTop);
+    });
+}
+
 function hasAvatarRankDecoration(el: HTMLElement): boolean {
   if (el.querySelector('.xhunt-avatar-rank-badge')) return true;
 
@@ -513,8 +521,9 @@ export function useAvatarRanks() {
         return;
       }
       hasCredibilityBadgeRef.current = !!document.querySelector(
-        '.credibility-badge-wrapper',
+        '.credibility-badge-wrapper, .signal-avatar-badge__label',
       );
+      syncAvatarRankBadgePosition(hasCredibilityBadgeRef.current);
       const getProcessedAvatars = (useAvatarElements as any)
         .getProcessedAvatars;
       const resetAvatar = (useAvatarElements as any).resetAvatar;

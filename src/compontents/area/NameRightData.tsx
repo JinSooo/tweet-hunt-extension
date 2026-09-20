@@ -15,7 +15,9 @@ import {
   MultiFieldItem,
   SoulDensityData,
 } from '~types';
-import KolAbilityRadar from '~/compontents/KolAbilityRadar.tsx';
+import KolAbilityRadar, {
+  buildAbilityFooter,
+} from '~/compontents/KolAbilityRadar.tsx';
 import AbilityTags from '~/compontents/AbilityTags.tsx';
 import {
   generatePersonalizedColor,
@@ -40,6 +42,8 @@ import { useLocalStorage } from '~storage/useLocalStorage.ts';
 
 type DomainType = 'web3' | 'ai';
 const AI_ABILITY_MIN_SCORE = 70;
+const ABILITY_MODEL_MIN_DISPLAY_COUNT = 1;
+const ABILITY_MODEL_MIN_RADAR_COUNT = 3;
 
 type NameRightDataProps = Pick<
   MainData,
@@ -104,8 +108,12 @@ function getAbilityModelData(
   }
 }
 
-function hasEnoughAbilityData(data: AbilityModelData) {
-  return data.abilities.length >= 4;
+function hasDisplayableAbilityData(data: AbilityModelData) {
+  return data.abilities.length >= ABILITY_MODEL_MIN_DISPLAY_COUNT;
+}
+
+function hasRadarAbilityData(data: AbilityModelData) {
+  return data.abilities.length >= ABILITY_MODEL_MIN_RADAR_COUNT;
 }
 
 function NameInsightsSkeleton() {
@@ -133,6 +141,227 @@ interface AbilityModelPanelProps {
   aiLabel: string;
 }
 
+interface AbilityModelDetailPanelProps {
+  web3Data: AbilityModelData;
+  aiData: AbilityModelData;
+  activeDomain: DomainType;
+  onDomainChange: (domain: DomainType) => void;
+  title: string;
+  web3Label: string;
+  aiLabel: string;
+  personalizedColor: string;
+}
+
+function getAbilityScore(item: MultiFieldItem) {
+  try {
+    const key = Object.keys(item)[0];
+    const score = Number(item?.[key]);
+    if (!Number.isFinite(score)) return 0;
+    return Math.max(0, Math.min(100, score));
+  } catch {
+    return 0;
+  }
+}
+
+function getAbilityName(item: MultiFieldItem, index: number) {
+  try {
+    const key = Object.keys(item)[0];
+    return key || `Ability${index + 1}`;
+  } catch {
+    return `Ability${index + 1}`;
+  }
+}
+
+function AbilityModelDetailPanel({
+  web3Data,
+  aiData,
+  activeDomain,
+  onDomainChange,
+  title,
+  web3Label,
+  aiLabel,
+  personalizedColor,
+}: AbilityModelDetailPanelProps) {
+  const { t, lang } = useI18n();
+  const {
+    handler: hookUsername,
+    displayName: hookName,
+    avatar: hookAvatar,
+    loading: hookLoading,
+  } = usePlacementTracking();
+  const domUserInfo = useMemo(
+    () =>
+      hookUsername
+        ? {
+          username: hookUsername,
+          name: hookName,
+          avatar: hookAvatar,
+        }
+        : null,
+    [hookUsername, hookName, hookAvatar],
+  );
+  const hasWeb3Data = hasDisplayableAbilityData(web3Data);
+  const hasAiData = hasDisplayableAbilityData(aiData);
+  const canSwitch = hasWeb3Data && hasAiData;
+  const currentDomain: DomainType =
+    activeDomain === 'ai'
+      ? hasAiData
+        ? 'ai'
+        : 'web3'
+      : hasWeb3Data
+        ? 'web3'
+        : 'ai';
+  const currentData = currentDomain === 'ai' ? aiData : web3Data;
+  const domainOptions = (['web3', 'ai'] as DomainType[]).filter((domain) =>
+    domain === 'ai' ? hasAiData : hasWeb3Data,
+  );
+  const abilityFooter = useMemo(() => {
+    return buildAbilityFooter(
+      t('abilityModelFooter') || '',
+      currentData.updateTime,
+      lang,
+    );
+  }, [t, currentData.updateTime, lang]);
+
+  return (
+    <div className='px-3 pt-1 pb-3 min-w-[360px] theme-bg-secondary rounded-lg relative'>
+      <div className='flex items-center gap-3 pb-1 border-b theme-border'>
+        <div className='relative'>
+          {hookLoading ? (
+            <div className='w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 animate-pulse flex items-center justify-center'>
+              <div className='w-5 h-5 text-gray-400'>
+                <svg viewBox='0 0 24 24' fill='currentColor'>
+                  <path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z' />
+                </svg>
+              </div>
+            </div>
+          ) : domUserInfo?.avatar ? (
+            <img
+              src={domUserInfo.avatar}
+              alt={domUserInfo.name}
+              className='w-10 h-10 rounded-full border-2 theme-border'
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className='w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center border-2 theme-border'>
+              <span className='text-white font-medium text-sm'>
+                {domUserInfo?.name
+                  ? domUserInfo.name.charAt(0).toUpperCase()
+                  : '?'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className='flex-1 min-w-0'>
+          {hookLoading ? (
+            <div className='space-y-1'>
+              <div className='h-4 bg-gray-300 dark:bg-gray-600 rounded animate-pulse w-20'></div>
+              <div className='h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse w-16'></div>
+            </div>
+          ) : (
+            <>
+              <h3 className='text-sm font-medium theme-text-primary leading-tight truncate'>
+                {domUserInfo?.name || 'Unknown User'}
+              </h3>
+              <p className='text-xs theme-text-secondary leading-tight truncate'>
+                @{domUserInfo?.username || 'unknown'}
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className='flex flex-col items-end gap-1 text-right shrink-0'>
+          <h3 className='text-[10px] font-medium theme-text-primary leading-none'>
+            {title}
+          </h3>
+          {canSwitch ? (
+            <div className='inline-flex items-center gap-0.5 theme-bg-tertiary rounded-full p-[2px]'>
+              {domainOptions.map((domain) => {
+                const active = currentDomain === domain;
+                const isAi = domain === 'ai';
+                return (
+                  <button
+                    key={domain}
+                    type='button'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDomainChange(domain);
+                    }}
+                    className={`px-2 py-0.5 text-[11px] rounded-full font-semibold leading-none transition-all ${active
+                      ? 'text-white'
+                      : 'theme-text-secondary hover:theme-text-primary'
+                      }`}
+                    style={
+                      active
+                        ? {
+                          background: isAi
+                            ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'
+                            : 'linear-gradient(135deg, #1D9BF0 0%, #a855f7 100%)',
+                          boxShadow: isAi
+                            ? '0 1px 4px rgba(16,185,129,0.2)'
+                            : '0 1px 4px rgba(29,155,240,0.22)',
+                        }
+                        : undefined
+                    }
+                  >
+                    {isAi ? aiLabel : web3Label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <span
+              className='text-[10px] font-semibold leading-none'
+              style={{ color: currentDomain === 'ai' ? '#10b981' : '#1D9BF0' }}
+            >
+              {currentDomain === 'ai' ? aiLabel : web3Label}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className='py-2 space-y-2'>
+        {currentData.abilities.map((item, index) => {
+          const name = getAbilityName(item, index);
+          const score = getAbilityScore(item);
+
+          return (
+            <div
+              key={`${name}-${index}`}
+              className='flex items-center justify-between gap-3'
+            >
+              <span className='text-xs font-medium theme-text-primary truncate'>
+                {name}
+              </span>
+              <span
+                className='text-xs font-semibold shrink-0'
+                style={{ color: personalizedColor }}
+              >
+                {score}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {currentData.summary && (
+        <div className='pt-2 border-t theme-border'>
+          <h4 className='text-xs font-medium theme-text-primary mb-1'>
+            {t('abilityAnalysis')}
+          </h4>
+          <p className='text-xs theme-text-secondary leading-relaxed'>
+            {currentData.summary}
+            {abilityFooter ? <> ({abilityFooter})</> : null}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AbilityModelPanel({
   web3Data,
   aiData,
@@ -145,10 +374,17 @@ function AbilityModelPanel({
   web3Label,
   aiLabel,
 }: AbilityModelPanelProps) {
-  const hasWeb3Data = hasEnoughAbilityData(web3Data);
-  const hasAiData = hasEnoughAbilityData(aiData);
+  const hasWeb3Data = hasDisplayableAbilityData(web3Data);
+  const hasAiData = hasDisplayableAbilityData(aiData);
   const canSwitch = hasWeb3Data && hasAiData;
-  const currentDomain = activeDomain === 'ai' && hasAiData ? 'ai' : 'web3';
+  const currentDomain: DomainType =
+    activeDomain === 'ai'
+      ? hasAiData
+        ? 'ai'
+        : 'web3'
+      : hasWeb3Data
+        ? 'web3'
+        : 'ai';
   const currentData = currentDomain === 'ai' ? aiData : web3Data;
   const domainOptions = (['web3', 'ai'] as DomainType[]).filter((domain) =>
     domain === 'ai' ? hasAiData : hasWeb3Data,
@@ -304,8 +540,8 @@ function _NameRightData({
     const fallbackData =
       requestedDomain === 'ai' ? web3AbilityData : aiAbilityData;
 
-    if (hasEnoughAbilityData(requestedData)) return requestedDomain;
-    if (hasEnoughAbilityData(fallbackData)) {
+    if (hasDisplayableAbilityData(requestedData)) return requestedDomain;
+    if (hasDisplayableAbilityData(fallbackData)) {
       return requestedDomain === 'ai' ? 'web3' : 'ai';
     }
     return requestedDomain;
@@ -380,16 +616,20 @@ function _NameRightData({
     ? rootMembers.length
     : projectMemberStats.totalMembers || 0;
 
-  // 检查是否应该显示能力模型（至少4个能力 + 配置允许）
+  // 检查是否应该显示能力模型（至少1个能力 + 配置允许）
   const shouldShowAbilityModel = useMemo(() => {
     // 检查配置是否允许显示能力模型
     const configAllowsDisplay = configManager.shouldShowAbilityModel();
 
-    // 检查数据是否满足显示条件（至少4个能力）
-    const hasEnoughAbilities = abilities && abilities.length >= 4;
+    // 检查数据是否满足展示条件（至少1个能力）
+    const hasDisplayableAbilities =
+      abilities && abilities.length >= ABILITY_MODEL_MIN_DISPLAY_COUNT;
 
-    return configAllowsDisplay && hasEnoughAbilities;
+    return configAllowsDisplay && hasDisplayableAbilities;
   }, [abilities]);
+  const shouldShowAbilityRadar = useMemo(() => {
+    return hasRadarAbilityData(defaultAbilityData);
+  }, [defaultAbilityData]);
 
   if (!shadowRoot) return null;
   if (error || !userId) {
@@ -676,20 +916,34 @@ function _NameRightData({
                   />
                 }
                 hoverContent={
-                  <AbilityModelPanel
-                    web3Data={web3AbilityData}
-                    aiData={aiAbilityData}
-                    activeDomain={activeAbilityDomain}
-                    onDomainChange={setStoredAbilityDomain}
-                    userId={userId}
-                    newTwitterData={newTwitterData}
-                    loadingTwInfo={loadingTwInfo}
-                    title={t('kolAbilityModel')}
-                    web3Label={t('domainWeb3') || 'Web3'}
-                    aiLabel={t('domainAi') || 'AI'}
-                  />
+                  shouldShowAbilityRadar ? (
+                    <AbilityModelPanel
+                      web3Data={web3AbilityData}
+                      aiData={aiAbilityData}
+                      activeDomain={activeAbilityDomain}
+                      onDomainChange={setStoredAbilityDomain}
+                      userId={userId}
+                      newTwitterData={newTwitterData}
+                      loadingTwInfo={loadingTwInfo}
+                      title={t('kolAbilityModel')}
+                      web3Label={t('domainWeb3') || 'Web3'}
+                      aiLabel={t('domainAi') || 'AI'}
+                    />
+                  ) : (
+                    <AbilityModelDetailPanel
+                      web3Data={web3AbilityData}
+                      aiData={aiAbilityData}
+                      activeDomain={activeAbilityDomain}
+                      onDomainChange={setStoredAbilityDomain}
+                      title={t('kolAbilityModel')}
+                      web3Label={t('domainWeb3') || 'Web3'}
+                      aiLabel={t('domainAi') || 'AI'}
+                      personalizedColor={personalizedColors.primary}
+                    />
+                  )
                 }
                 valueClassName={'text-[#1D9BF0]'}
+                preferredPlacement='bottom'
               />
             )}
 

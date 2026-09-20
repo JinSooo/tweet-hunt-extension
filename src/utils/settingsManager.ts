@@ -67,7 +67,11 @@ const ALL_SETTING_KEYS = [
   'showAnnualReport',
   'showFeatureSlot',
   'showHotTrendingWeb3',
-  'showReplyAlpha', // 抢评 Alpha（隐藏设置，不在 UI 显示开关）
+  'showReplyAlpha',
+  'showReplyAlphaCn_web3',
+  'showReplyAlphaGlobal_web3',
+  'showReplyAlphaCn_ai',
+  'showReplyAlphaGlobal_ai',
   'showHotTrendingAi',
   'showHunterCampaign',
   'showNotes',
@@ -544,7 +548,7 @@ export const useCrossPageSettings = () => {
     if (!features.includes(settingKey)) return false;
     const uname =
       typeof currentUsername === 'string' ? currentUsername.toLowerCase() : '';
-    const isTester = uname ? testers.includes(uname) && !disableTesting : false;
+    const isTester = uname ? testers.includes(uname) : false;
     return isTester;
   };
 

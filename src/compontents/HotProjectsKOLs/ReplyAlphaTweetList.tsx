@@ -16,6 +16,7 @@ type ReplyAlphaTweetItem = {
   rank?: number;
   burst_label?: string;
   burst_probability?: number;
+  burst_speed?: number;
   competition_score?: number;
   reply_count?: number;
   tweet?: {
@@ -72,6 +73,16 @@ const formatScore = (num: number | undefined) => {
   return numeral(num || 0).format('0.[0]');
 };
 
+const formatSpeed = (num: number | undefined) => {
+  if (num === undefined || num === null) return '';
+  return `+ ${numeral(num || 0)
+    .format('0.[0]a')
+    .toUpperCase()}/H`;
+};
+
+const getBurstSpeedClassName = () =>
+  'inline-flex items-center text-[10px] font-semibold leading-none text-emerald-500';
+
 function VerifiedBadge() {
   return (
     <svg
@@ -90,19 +101,6 @@ export function ReplyAlphaTweetList(props: {
 }) {
   const { t } = useI18n();
   const { items, lang } = props;
-
-  const getBurstLabel = (label: string | undefined) => {
-    const value = String(label || '').trim().toLowerCase();
-    if (!value) return '';
-    if (value === '飙升' || value === 'rising') {
-      return t('replyAlphaBurstRising');
-    }
-    if (value === '正常' || value === 'normal') {
-      return t('replyAlphaBurstNormal');
-    }
-    return label || '';
-  };
-
   if (!items.length) {
     return (
       <div className='mt-3 flex items-center justify-center h-[260px] theme-text-secondary'>
@@ -123,7 +121,8 @@ export function ReplyAlphaTweetList(props: {
         const username = profile?.username_raw || profile?.username || 'unknown';
         const tweetId = tw?.id || it?.id || 'unknown';
         const rank = it?.rank ?? idx + 1;
-        const burstLabel = getBurstLabel(it?.burst_label);
+        const burstSpeed = formatSpeed(it?.burst_speed);
+        const burstSpeedClassName = getBurstSpeedClassName();
         const title =
           lang === 'zh'
             ? ai?.title_cn ||
@@ -204,15 +203,6 @@ export function ReplyAlphaTweetList(props: {
                     </div>
                     <div className='flex items-center gap-1 text-[11px] theme-text-secondary'>
                       <span className='truncate'>@{profile?.username || username}</span>
-                      {burstLabel && (
-                        <>
-                          <span>•</span>
-                          <span>{burstLabel}</span>
-                        </>
-                      )}
-                      {typeof it?.burst_probability === 'number' && (
-                        <span>{Number(it.burst_probability).toFixed(0)}%</span>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -221,8 +211,13 @@ export function ReplyAlphaTweetList(props: {
                   {title || t('replyAlphaNoContent')}
                 </div>
 
-                <div className='mt-2 flex items-center justify-end gap-2 text-[10px] theme-text-secondary'>
-                  <span className='flex items-center gap-2 flex-shrink-0'>
+                <div className='mt-2 flex items-center justify-between gap-2 text-[10px] theme-text-secondary'>
+                  {burstSpeed && (
+                    <span className={`${burstSpeedClassName} shrink-0`}>
+                      {burstSpeed}
+                    </span>
+                  )}
+                  <span className='ml-auto flex items-center gap-2 flex-shrink-0'>
                     <span className='inline-flex items-center gap-0.5'>
                       <MessageCircle className='w-3 h-3' />
                       {formatNumber(it?.reply_count ?? tw?.statistic?.reply_count)}

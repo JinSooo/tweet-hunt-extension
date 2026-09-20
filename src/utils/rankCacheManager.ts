@@ -35,8 +35,64 @@ const devLog = (level: 'log' | 'warn' | 'error', ...args: any[]) => {
 
 export type RankCacheNamespace = 'web3' | 'ai';
 
+const RANK_NAMESPACES: RankCacheNamespace[] = ['web3', 'ai'];
+
+// 同步查询内存缓存中是否存在 KOL 排名（供净化器豁免/拦截记录过滤复用）
+export const hasKolRankInCache = (handle: string): boolean => {
+  if (!handle) return false;
+  return RANK_NAMESPACES.some((ns) => {
+    const entry = RankCacheManager.peekSync(handle, ns);
+    return Boolean(entry && entry.kolRank > 0);
+  });
+};
+
 export class RankCacheManager {
   private static cleanupTimer: NodeJS.Timeout | null = null;
+  private static memoryCache: Map<RankCacheNamespace, RankCache> = new Map();
+  private static preloadPromise: Promise<void> | null = null;
+
+  // Preload caches into memory
+  static async preload(): Promise<void> {
+    if (this.preloadPromise) return this.preloadPromise;
+    this.preloadPromise = (async () => {
+      try {
+        const namespaces: RankCacheNamespace[] = ['web3', 'ai'];
+        await Promise.all(
+          namespaces.map(async (ns) => {
+            const cache = ((await localStorageInstance.get(
+              buildCacheKey(ns)
+            )) as RankCache | null) || {};
+            // 预热读取期间可能已有新数据写入内存缓存，以较新的内存数据为准合并，避免覆盖
+            const existing = this.memoryCache.get(ns);
+            this.memoryCache.set(ns, existing ? { ...cache, ...existing } : cache);
+          })
+        );
+      } catch (error) {
+        devLog(
+          'error',
+          `📊 [v${packageJson.version}] Failed to preload rank cache:`,
+          error
+        );
+        // 预热失败时重置，允许后续调用重试
+        this.preloadPromise = null;
+      }
+    })();
+    return this.preloadPromise;
+  }
+
+  // Check if memory cache is warmed
+  static isMemoryWarmed(namespace?: RankCacheNamespace): boolean {
+    if (namespace) {
+      return this.memoryCache.has(namespace);
+    }
+    return this.memoryCache.has('web3') && this.memoryCache.has('ai');
+  }
+
+  // Reset memory cache (useful for testing)
+  static clearMemoryCache(): void {
+    this.memoryCache.clear();
+    this.preloadPromise = null;
+  }
 
   // Start cleanup timer
   static startCleanupTimer(interval = 10 * 60 * 1000) {
@@ -95,21 +151,27 @@ export class RankCacheManager {
     }
   }
 
-  // Get cache from local storage (encrypted wrapper)
+  // Get cache (memory-first; storage is only read on first access per session)
   static async getCache(namespace: RankCacheNamespace): Promise<RankCache> {
     try {
+      // 内存优先：预热后同标签页内不再重复完整读取 chrome.storage
+      const cached = this.memoryCache.get(namespace);
+      if (cached) return cached;
+
       const cacheKey = buildCacheKey(namespace);
       const cache = (await localStorageInstance.get(
         cacheKey
       )) as RankCache | null;
-      return cache || {};
+      const result = cache || {};
+      this.memoryCache.set(namespace, result);
+      return result;
     } catch (error) {
       devLog(
         'error',
         `📊 [v${packageJson.version}] Failed to get cache:`,
         error
       );
-      return {};
+      return this.memoryCache.get(namespace) || {};
     }
   }
 
@@ -169,6 +231,7 @@ export class RankCacheManager {
       }
 
       await localStorageInstance.set(buildCacheKey(namespace), cache);
+      this.memoryCache.set(namespace, cache);
     } catch (error) {
       devLog(
         'error',
@@ -178,6 +241,7 @@ export class RankCacheManager {
       // If storage fails, try to clear cache
       try {
         await localStorageInstance.remove(RANK_CACHE_KEY);
+        this.memoryCache.delete(namespace);
         devLog(
           'warn',
           `📊 [v${packageJson.version}] Cache cleared due to storage failure`
@@ -220,6 +284,42 @@ export class RankCacheManager {
       devLog(
         'error',
         `📊 [v${packageJson.version}] Failed to get cache entry:`,
+        error
+      );
+      return null;
+    }
+  }
+
+  // Read-only synchronous lookup from in-memory cache
+  static peekSync(
+    username: string,
+    namespace: RankCacheNamespace
+  ): RankCacheEntry | null {
+    if (!username) return null;
+    const cache = this.memoryCache.get(namespace);
+    if (!cache) return null;
+    const entry = cache[username.toLowerCase()];
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > CACHE_EXPIRATION) return null;
+    return entry;
+  }
+
+  // Read-only lookup: skips lastAccessed update and storage write-back,
+  // for high-frequency read scenarios (e.g. tweet cleaner KOL exemption)
+  static async peek(
+    username: string,
+    namespace: RankCacheNamespace
+  ): Promise<RankCacheEntry | null> {
+    try {
+      const cache = await this.getCache(namespace);
+      const entry = cache[username.toLowerCase()];
+      if (!entry) return null;
+      if (Date.now() - entry.timestamp > CACHE_EXPIRATION) return null;
+      return entry;
+    } catch (error) {
+      devLog(
+        'error',
+        `📊 [v${packageJson.version}] Failed to peek cache entry:`,
         error
       );
       return null;
@@ -454,6 +554,7 @@ export class RankCacheManager {
   // Force clear all cache data
   static async forceClearAll(): Promise<void> {
     try {
+      this.memoryCache.clear();
       // Clear storage
       // influence: 清理新旧缓存
       await localStorageInstance.remove(RANK_CACHE_KEY);

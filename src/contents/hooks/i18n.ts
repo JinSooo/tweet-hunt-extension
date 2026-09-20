@@ -118,12 +118,16 @@ export const useI18n = () => {
     };
   }, [lang, remoteTranslations]);
 
-  const t = useCallback((key: string) => {
+  const t = useCallback((key: string, fallback?: string) => {
     try {
       // @ts-ignore
-      return translations[key] || key;
+      const val = translations[key];
+      if (val !== undefined && val !== null && val !== '') {
+        return val;
+      }
+      return fallback !== undefined ? fallback : key;
     } catch (err) {
-      return key;
+      return fallback !== undefined ? fallback : key;
     }
   }, [translations]);
 

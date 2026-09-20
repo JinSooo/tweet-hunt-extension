@@ -26,7 +26,7 @@ interface KolAbilityRadarProps {
   updateTime?: string | number | null;
 }
 
-const formatAbilityUpdateDate = (value?: string | number | null) => {
+export const formatAbilityUpdateDate = (value?: string | number | null) => {
   if (value === undefined || value === null) return '';
 
   const raw = String(value).trim();
@@ -59,7 +59,7 @@ const formatAbilityUpdateDate = (value?: string | number | null) => {
   return raw;
 };
 
-const buildAbilityFooter = (
+export const buildAbilityFooter = (
   template: string,
   updateTime?: string | number | null,
   lang?: string,

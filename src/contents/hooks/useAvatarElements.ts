@@ -64,6 +64,24 @@ const collectAddedAvatarElements = (mutations: MutationRecord[]) => {
   return Array.from(elements);
 };
 
+// cleaner 恢复/展开推文时会移除 article 上的 data-xhunt-cleaner-action，
+// 此时推文内的头像需要重新扫描（被屏蔽期间因不可见被尺寸过滤排除，从未进入处理队列）
+const collectRestoredArticleAvatars = (mutations: MutationRecord[]) => {
+  const elements = new Set<HTMLElement>();
+
+  mutations.forEach((mutation) => {
+    if (
+      mutation.type !== 'attributes' ||
+      mutation.attributeName !== 'data-xhunt-cleaner-action'
+    ) {
+      return;
+    }
+    addAvatarDescendants(elements, getElementFromNode(mutation.target));
+  });
+
+  return Array.from(elements);
+};
+
 const collectRemovedAvatarRoots = (mutations: MutationRecord[]) => {
   const roots: HTMLElement[] = [];
 
@@ -313,16 +331,25 @@ export function useAvatarElements() {
     const unsubscribe = subscribeToMutation(
       (mutations) => {
         const addedAvatarElements = collectAddedAvatarElements(mutations);
+        const restoredAvatars = collectRestoredArticleAvatars(mutations);
         const removedRoots = collectRemovedAvatarRoots(mutations);
-        scheduleFocusedScan(addedAvatarElements, removedRoots);
+        scheduleFocusedScan(
+          [...addedAvatarElements, ...restoredAvatars],
+          removedRoots,
+        );
       },
       {
         childList: true,
         subtree: true,
+        attributes: true,
+        attributeFilter: ['data-xhunt-cleaner-action'],
       },
       {
-        // 使用 filter 只处理 childList 类型的 mutations
-        filter: (mutation) => mutation.type === 'childList',
+        // 只处理 childList 与 cleaner 恢复推文的属性变更
+        filter: (mutation) =>
+          mutation.type === 'childList' ||
+          (mutation.type === 'attributes' &&
+            mutation.attributeName === 'data-xhunt-cleaner-action'),
         debugName: 'useAvatarElements', // 调试名称
       },
     );

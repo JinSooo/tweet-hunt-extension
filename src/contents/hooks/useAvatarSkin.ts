@@ -3,11 +3,11 @@ import { avatarSkins } from '../constants/avatarSkins';
 import { subscribeToMutation } from './useGlobalMutationObserver';
 import { useLocalStorage } from '~/storage/useLocalStorage';
 
-const AVATAR_SKIN_STORAGE_KEY = '@xhunt/avatar_skin';
-const AVATAR_SKIN_CUSTOMIZED_KEY = '@xhunt/avatar_skin_customized';
+export const AVATAR_SKIN_STORAGE_KEY = '@xhunt/avatar_skin';
+export const AVATAR_SKIN_CUSTOMIZED_KEY = '@xhunt/avatar_skin_customized';
 
 // --- Helper Function ---
-function applySkin(skinId: string, avatarRankMode: 'web3' | 'ai') {
+export function applySkin(skinId: string, avatarRankMode: 'web3' | 'ai') {
   try {
     if (typeof document === 'undefined') return;
 

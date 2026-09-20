@@ -1,5 +1,24 @@
 import { useEffect } from 'react';
 
+const isExtensionContextInvalidated = (error?: unknown) => {
+  try {
+    // @ts-ignore
+    const runtime = chrome?.runtime as any;
+    if (!runtime?.id) return true;
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'string'
+          ? error
+          : runtime.lastError?.message || '';
+
+    return /Extension context invalidated|context invalidated/i.test(message);
+  } catch {
+    return true;
+  }
+};
+
 /**
  * 用途：在内容脚本运行于 x.com 时，建立到 background 的长连接 Port（name: 'presence'）。
  * 背景：background 通过 onConnect/onDisconnect 感知是否存在 x.com 页面，
@@ -32,7 +51,20 @@ export default function usePresencePort() {
         port = p;
 
         p.onDisconnect.addListener(() => {
+          let lastError: unknown = null;
+          try {
+            // @ts-ignore
+            lastError = chrome?.runtime?.lastError;
+          } catch (error) {
+            window.location.reload();
+            return;
+          }
           port = null;
+
+          if (isExtensionContextInvalidated(lastError)) {
+            window.location.reload();
+            return;
+          }
 
           if (!destroyed && document.visibilityState === 'visible') {
 
@@ -41,8 +73,10 @@ export default function usePresencePort() {
             }, 100);
           }
         });
-      } catch (_) {
-
+      } catch (error) {
+        if (isExtensionContextInvalidated(error)) {
+          window.location.reload();
+        }
       } finally {
         isConnecting = false;
       }

@@ -47,8 +47,8 @@ export function extractUsernameFromUrl(url: string): string {
     // 使用 URL 构造函数解析 URL
     const parsedUrl = new URL(url);
 
-    // 检查域名是否为 x.com
-    if (parsedUrl.hostname !== 'x.com') {
+    // 检查域名是否为 x.com 或 twitter.com
+    if (parsedUrl.hostname !== 'x.com' && parsedUrl.hostname !== 'twitter.com') {
       return '';
     }
 
