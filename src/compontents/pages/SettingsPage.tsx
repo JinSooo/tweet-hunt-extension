@@ -1124,6 +1124,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             className='flex-1 min-h-0 overflow-y-auto scrollbar-hide'
           >
             <div className='py-2'>
+              <p role='note' className='m-2 p-3 rounded-lg border theme-border text-xs theme-text-secondary'>
+                {t('publicBuildNotice')}
+              </p>
               <div className='ml-1 mr-1'>
 
 

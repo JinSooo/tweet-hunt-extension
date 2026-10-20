@@ -1,4 +1,5 @@
 {
+  "publicBuildNotice": "社区移植版：本地设置和页面功能可用。上游未公开后端/API，登录、AI 分析和云端数据功能不可用。",
   "settings": "设置",
   "engageEarnLearnMore": "了解更多：<a href=\"https://x.com/xhunt_ai/status/2009941394002194773\">互动赚钱介绍</a>",
   "settingsTitle": "XHunt 设置",

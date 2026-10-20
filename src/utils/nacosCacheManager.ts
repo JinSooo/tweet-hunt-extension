@@ -11,6 +11,7 @@ class NacosCacheManager {
     return undefined;
   }
   clearCache(): void {}
+  invalidate(_dataId: string): void {}
   getStats(): Record<string, any> {
     return {};
   }

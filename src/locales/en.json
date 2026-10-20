@@ -1,4 +1,5 @@
 {
+  "publicBuildNotice": "Community port: local settings and page features are available. The upstream backend/API is not public; sign-in, AI analysis and cloud data are unavailable.",
   "settings": "Settings",
   "engageEarnLearnMore": "Learn more: <a href=\"https://x.com/xhunt_ai/status/2009941394002194773\">Engage to Earn intro</a>",
   "settingsTitle": "XHunt Settings",

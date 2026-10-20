@@ -2,7 +2,8 @@
   "presets": [
     ["@babel/preset-env", {
       "targets": {
-        "chrome": "88"
+        "chrome": "88",
+        "firefox": "140"
       },
       "modules": false,
       "useBuiltIns": "usage",

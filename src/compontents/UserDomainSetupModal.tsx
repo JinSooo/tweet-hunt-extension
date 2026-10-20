@@ -409,6 +409,10 @@ export const UserDomainSetupModal: React.FC<UserDomainSetupModalProps> = ({
               </div>
             </div>
 
+            <p role='note' className='mb-4 text-xs theme-text-secondary'>
+              {t('publicBuildNotice')}
+            </p>
+
             <div className='mb-5 flex items-center gap-2.5'>
               <div
                 className='h-1 flex-1 rounded-full transition-colors'

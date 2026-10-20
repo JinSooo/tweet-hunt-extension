@@ -1,5 +1,7 @@
 const DEFAULT_EXTENSION_UPDATE_URL =
   'https://chromewebstore.google.com/detail/xhunt-%E2%80%93-your-ai-co-pilot/gonmfafjcdkngkbhcpmcphlgfhabkeji';
+const FIREFOX_EXTENSION_UPDATE_URL =
+  'https://github.com/JinSooo/tweet-hunt-extension/releases';
 
 export interface ExtensionUpdateRequiredInfo {
   updateUrl: string;
@@ -40,8 +42,12 @@ const normalizeUpdateInfo = (
 
   if (!updateRequired) return null;
 
-  const updateUrl =
-    pickString(
+  const isFirefox =
+    typeof chrome !== 'undefined' &&
+    chrome.runtime?.getURL('/').startsWith('moz-extension://');
+  const updateUrl = isFirefox
+    ? FIREFOX_EXTENSION_UPDATE_URL
+    : pickString(
       data.update_url,
       data.updateUrl,
       data.upgrade_url,

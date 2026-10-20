@@ -1,4 +1,21 @@
-# XHunt - AI 驱动的 Web3 KOLFi 平台
+# XHunt — Firefox 社区移植版
+
+基于 [AlphaHunt3/tweet-hunt-extension](https://github.com/AlphaHunt3/tweet-hunt-extension) 的非官方 fork，支持桌面 Firefox 142 及以上版本。
+
+**功能边界：上游公开仓库删去了后端 API、请求签名和部分业务模块。本版本可以运行本地设置与页面功能；登录、AI 分析、排行榜、云同步等服务功能不可用。** 缺失的服务会明确报错，不会模拟成功。
+
+```bash
+corepack pnpm install --frozen-lockfile
+corepack pnpm package:firefox
+```
+
+在 Firefox 打开 `about:debugging#/runtime/this-firefox`，点击“临时载入附加组件”，选择 `build/firefox-mv3-prod/manifest.json`。访问 `https://x.com` 后完成领域选择，再点击工具栏扩展图标打开设置。临时安装在 Firefox 重启后失效。
+
+详细构建、安装、验证与签名说明见 [Firefox 使用说明](docs/FIREFOX.md)。下方保留上游项目介绍，其中的在线功能描述不代表本 fork 已接入相应服务。
+
+---
+
+# 上游 XHunt - AI 驱动的 Web3 KOLFi 平台
 
 <div align="center">
 

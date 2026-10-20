@@ -5,6 +5,7 @@ import { realtimeService } from './services/realtime';
 import { backgroundConfig } from './utils/backgroundConfig';
 import { nacosCacheManager } from '../utils/nacosCacheManager';
 import { localStorageInstance } from '../storage/index.ts';
+import { isTrustedMessageSender } from './utils/isTrustedMessageSender';
 
 // 定义消息类型常量
 const MESSAGE_TYPES = {
@@ -53,25 +54,6 @@ function isAllowedApiUrl(url: string): boolean {
     return (
       parsed.protocol === 'https:' &&
       ALLOWED_API_HOSTS.has(parsed.hostname)
-    );
-  } catch {
-    return false;
-  }
-}
-
-function isTrustedMessageSender(sender: any): boolean {
-  const extensionId = (chrome as any).runtime?.id;
-  if (!sender || sender.id !== extensionId) return false;
-
-  const senderUrl = sender.origin || sender.url || '';
-  if (!senderUrl) return true;
-
-  try {
-    const parsed = new URL(senderUrl);
-    return (
-      parsed.origin === `chrome-extension://${extensionId}` ||
-      (parsed.protocol === 'https:' &&
-        (parsed.hostname === 'x.com' || parsed.hostname === 'twitter.com'))
     );
   } catch {
     return false;
