@@ -16,8 +16,9 @@
     "build": "plasmo build",
     "build:firefox": "plasmo build --target=firefox-mv3",
     "lint:firefox": "web-ext lint --source-dir build/firefox-mv3-prod",
-    "package:firefox": "npm run build:firefox && npm run lint:firefox && web-ext build --source-dir build/firefox-mv3-prod --artifacts-dir build/firefox-artifacts --overwrite-dest",
-    "test:unit": "node --experimental-strip-types --test tests/unit/*.test.mjs"
+    "package:firefox": "python3 scripts/package-firefox.py && web-ext lint --source-dir build/firefox-official",
+    "package:firefox:source": "npm run build:firefox && npm run lint:firefox && web-ext build --source-dir build/firefox-mv3-prod --artifacts-dir build/firefox-artifacts --overwrite-dest",
+    "test:unit": "node --experimental-strip-types --test tests/unit/*.test.mjs && python3 -m unittest discover -s tests/unit -p 'test_*.py'"
   },
   "manifest": {
     "permissions": [

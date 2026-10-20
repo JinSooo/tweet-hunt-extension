@@ -2,16 +2,20 @@
 
 基于 [AlphaHunt3/tweet-hunt-extension](https://github.com/AlphaHunt3/tweet-hunt-extension) 的非官方 fork，支持桌面 Firefox 142 及以上版本。
 
-**功能边界：上游公开仓库删去了后端 API、请求签名和部分业务模块。本版本可以运行本地设置与页面功能；登录、AI 分析、排行榜、云同步等服务功能不可用。** 缺失的服务会明确报错，不会模拟成功。
+**线上数据尚未验收通过。** 上游公开源码删去了后端请求层，直接编译源码的 0.4.1 版本只有本地功能，会将业务失败显示为“暂无数据”。现在另提供包含官方请求层的 Firefox 诊断包；隔离访客环境的业务请求仍被服务拒绝，不能将成功打包视为榜单已恢复。
+
+以下命令从 Google 下载经 SHA256 固定的官方 Chrome 0.4.2，在本机仅修改 Firefox 兼容项；官方业务代码不提交到本 fork。需要 Python 3、Node.js 22.18+（22 LTS）或 24 LTS：
 
 ```bash
 corepack pnpm install --frozen-lockfile
 corepack pnpm package:firefox
 ```
 
-在 Firefox 打开 `about:debugging#/runtime/this-firefox`，点击“临时载入附加组件”，选择 `build/firefox-mv3-prod/manifest.json`。访问 `https://x.com` 后完成领域选择，再点击工具栏扩展图标打开设置。临时安装在 Firefox 重启后失效。
+**加载前请了解：完整客户端会连接 XHunt 服务，传输账号标识、相关 X 页面内容，以及你主动提交的聊天、评论和备注等。Firefox 临时调试加载会自动授予 manifest 中声明的权限与数据类别。** 详见 [数据与安装说明](docs/FIREFOX.md#数据与权限)。
 
-详细构建、安装、验证与签名说明见 [Firefox 使用说明](docs/FIREFOX.md)。下方保留上游项目介绍，其中的在线功能描述不代表本 fork 已接入相应服务。
+在 Firefox 打开 `about:debugging#/runtime/this-firefox`，点击“临时载入附加组件”，选择新生成的 `build/firefox-artifacts/xhunt_official_firefox-0.4.2.zip`。刷新已经打开的 `https://x.com` 页面，完成领域选择。不要重新加载旧 `firefox-mv3-prod` 目录；它仍是缺少后端的公开源码版。临时安装在 Firefox 重启后失效。
+
+详细构建、安装、验证与签名说明见 [Firefox 使用说明](docs/FIREFOX.md)。下方保留上游项目介绍；在线功能仍取决于官方服务和正常登录/订阅权限，本 fork 不提供额外服务授权。
 
 ---
 
